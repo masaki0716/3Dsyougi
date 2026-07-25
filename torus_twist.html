@@ -1,0 +1,912 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>立体将棋 — ねじれトーラス</title>
+<style>
+  :root{
+    --ink:#2a2018; --gold:#8a6a1e; --brush:'Yu Mincho','YuMincho','HGSeikaishotaiPRO','HG正楷書体-PRO','MS PMincho',serif;
+  }
+  html,body{margin:0;height:100%;overflow:hidden;background:#f5f1e8;color:var(--ink);
+    font-family:var(--brush);}
+  #app{position:fixed;inset:0;}
+  canvas{display:block;}
+  .panel{position:fixed;background:rgba(255,253,248,.85);border:1px solid rgba(138,106,30,.4);
+    border-radius:10px;padding:10px 14px;backdrop-filter:blur(3px);pointer-events:none;
+    box-shadow:0 4px 18px rgba(80,60,20,.18);}
+  #legend{left:14px;bottom:14px;line-height:1.7;font-size:14px;max-width:300px;
+    background:rgba(255,253,248,.45);}
+  #legend h3{margin:0 0 6px;font-size:16px;letter-spacing:.15em;color:var(--gold);}
+  #legend b{color:#111;font-weight:700;}
+  #legend .k{display:inline-block;min-width:74px;color:var(--gold);}
+  #turn{left:50%;top:12px;transform:translateX(-50%);text-align:center;font-size:22px;
+    letter-spacing:.3em;padding:8px 26px;}
+  #turn small{display:block;font-size:12px;letter-spacing:.1em;opacity:.75;margin-top:2px;}
+  #info{right:14px;top:14px;font-size:14px;line-height:1.8;min-width:150px;}
+  #info .val{color:#111;}
+  .big{position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+    flex-direction:column;background:rgba(245,241,232,.82);z-index:20;}
+  .big .msg{font-size:64px;letter-spacing:.2em;color:#7a1810;
+    text-shadow:0 2px 4px rgba(0,0,0,.15);}
+  .big button{margin-top:26px;font-family:var(--brush);font-size:20px;letter-spacing:.2em;
+    color:var(--ink);background:#fff8ec;border:1px solid var(--gold);border-radius:8px;
+    padding:10px 30px;cursor:pointer;}
+  .big button:hover{background:#f0e6d2;}
+  #promo{gap:6px;}
+  #promo .msg{font-size:40px;}
+  #promo .sub{font-size:18px;letter-spacing:.15em;opacity:.85;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="turn" class="panel"><span id="turnLabel">先手番</span><small id="turnHint">手番の駒を選んでください</small></div>
+
+<div id="info" class="panel">
+  <div>カーソル <span class="val" id="curPos">-</span></div>
+  <div>マス <span class="val" id="curCell">空き</span></div>
+  <div id="selLine" style="display:none">選択 <span class="val" id="selInfo">-</span></div>
+</div>
+
+<div id="legend" class="panel">
+  <h3>操作方法</h3>
+  <div><span class="k">← →</span> 筋（円周方向）</div>
+  <div><span class="k">↑ ↓</span> 段（奥行き方向）</div>
+  <div><span class="k">Enter/Space</span> 選択 / 移動</div>
+  <div><span class="k">Esc</span> 選択解除</div>
+  <div><span class="k">マウス</span> ドラッグで回転・ホイールでズーム</div>
+  <div><span class="k">クリック</span> 駒選択・移動先指定</div>
+  <div><span class="k">R</span> 最初から</div>
+  <div style="margin-top:6px;opacity:.75">筋も段も輪になっていて端がありません／段を1周すると筋が1つずれます（雑巾を絞るような、ねじれたトーラス盤）／奥には駒のいない緩衝地帯があり、そこを抜けると裏側から敵陣とつながります／<b>王を取れば勝ち</b></div>
+</div>
+
+<div id="promo" class="big">
+  <div class="msg">成りますか？</div>
+  <div class="sub"><b>Y</b> = 成る　　<b>N</b> = 不成</div>
+</div>
+
+<div id="win" class="big">
+  <div class="msg" id="winMsg">先手の勝ち！</div>
+  <button onclick="location.reload()">もう一局（R）</button>
+</div>
+
+<div id="err" class="big" style="background:#15120d">
+  <div class="msg" style="font-size:26px;color:#e88">Three.js を読み込めませんでした。<br>インターネット接続を確認して再読み込みしてください。</div>
+</div>
+
+<div id="modeSelect" class="big" style="display:flex">
+  <div class="msg" style="font-size:34px">対局モードを選択</div>
+  <div style="display:flex;gap:16px;margin-top:26px">
+    <button id="btnLocal">この画面で2人対戦</button>
+    <button id="btnOnline">誰かと対戦（オンライン）</button>
+  </div>
+</div>
+
+<div id="onlineSetup" class="big">
+  <div class="msg" style="font-size:28px">オンライン対戦</div>
+  <div style="margin-top:14px;font-size:14px;letter-spacing:.1em;opacity:.8">対局コード</div>
+  <input id="roomCodeInput" maxlength="8" style="font-size:22px;letter-spacing:.25em;text-align:center;
+    width:190px;margin-top:8px;padding:8px;border:1px solid var(--gold);border-radius:6px;
+    background:#fff8ec;color:var(--ink);font-family:var(--brush)">
+  <div style="margin-top:12px;font-size:14px;max-width:340px;text-align:center;line-height:1.7;opacity:.85">
+    このコードを対戦相手に伝えてください。相手が同じコードで参加すると、そろい次第自動で対戦が始まります。
+  </div>
+  <button id="btnStartOnline" style="margin-top:20px">このコードで開始 / 参加</button>
+  <div id="onlineStatus" style="margin-top:16px;font-size:16px;letter-spacing:.1em"></div>
+</div>
+
+<div id="colorReveal" class="big">
+  <div class="msg" id="colorRevealMsg" style="font-size:42px">あなたは 先手（青） です</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/lines/LineSegmentsGeometry.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/lines/LineSegments2.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/lines/LineMaterial.js"></script>
+<script>
+if(typeof THREE==='undefined'){ document.getElementById('err').style.display='flex'; }
+else { main(); }
+
+function main(){
+'use strict';
+
+// ===================== 定数 =====================
+// 断面(輪切り)は r一定・θ方向9マス(40°刻み)の一列の輪＝筋(series2と同じ、シフト無し)。
+// 奥行き(Z/段)はこのシリーズの目玉：壁を撤去して完全に輪にし、1周(M段)するごとにθが
+// SHIFT分ずれる「ねじれトーラス」。実マスはz=0..8(9段)、その先にz=9..11(3段)の
+// 駒の無い緩衝地帯があり、そこを抜けるとθが1つずれた状態で先手陣(z=0)の裏に繋がる。
+const N = 9;
+const BOARD_Z = 9;
+const BUFFER = 3;
+const M = BOARD_Z + BUFFER;   // Z主ループの全長(12)
+const SHIFT = 1;              // Z方向に1周するごとのθずらし量
+const SENTE = 0, GOTE = 1;
+const SENTE_Z = 0, GOTE_Z = BOARD_Z - 1;
+const S = 1.6;
+const KOMA_T = 0.32;
+const DTH = 2*Math.PI/N;              // θ方向(筋)の1マスの角度
+const DPHI = 2*Math.PI/M;             // 奥行き(段)方向の1マスの角度
+const r = N*S/(2*Math.PI);            // 断面の半径(一定)
+const R = r*1.6;                      // メインループの半径
+const TWIST_RATE = (SHIFT*DTH)/(2*Math.PI); // 見た目上、φが2π進むごとにθをSHIFT*DTHだけ連続的にひねる割合
+
+const thetaOf = i => i*DTH;
+const phiOf = j => j*DPHI;
+function tin(v){ return ((v%N)+N)%N; }     // θは常に輪
+function zLabel(z){ return z<BOARD_Z ? '段'+(z+1) : '緩衝'+(z-BOARD_Z+1); }
+
+// Zをdz進めたときの(θ,Z)変換。dzは±1(レイの1歩)や±2(桂馬)などどんな整数でもよい。
+// M周期で折り返した回数(lap)分だけθをSHIFTずらす。桂馬を含む全ての移動判定がこれを通る。
+function stepCell(th, z, dth, dz){
+  const z2 = z + dz;
+  const lap = Math.floor(z2 / M);
+  const nz = z2 - lap*M;
+  const nth = tin(th + dth + lap*SHIFT);
+  return {th: nth, z: nz};
+}
+
+// 駒種: K王 G金 S銀 N桂 L香 R飛 B角 P歩
+const KANJI = {K:'王',G:'金',S:'銀',N:'桂',L:'香',R:'飛',B:'角',P:'歩'};
+const KANJI_GOTE_K = '玉';
+const PROMO_KANJI = {P:'と',L:'杏',N:'圭',S:'全',R:'龍',B:'馬'};
+const PROMOTABLE = {P:1,L:1,N:1,S:1,R:1,B:1};
+
+function kanjiOf(p){
+  if(p.promoted) return PROMO_KANJI[p.type];
+  if(p.type==='K') return p.owner===GOTE ? KANJI_GOTE_K : KANJI.K;
+  return KANJI[p.type];
+}
+function effType(p){
+  if(!p.promoted) return p.type;
+  if(p.type==='R') return 'R+';
+  if(p.type==='B') return 'B+';
+  return 'G';
+}
+
+// ===================== three.js 基盤 =====================
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf5f1e8);
+scene.fog = new THREE.Fog(0xf5f1e8, R*6.5, R*13.5);
+
+const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 300);
+camera.position.set(0.6, R*1.7, -R*2.1);
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth, innerHeight);
+document.getElementById('app').appendChild(renderer.domElement);
+
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.enablePan = false;
+controls.minDistance = Math.max(5, R*1.0);
+controls.maxDistance = R*8;
+controls.target.set(0,0,0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.68));
+const dir = new THREE.DirectionalLight(0xfff2d8, 0.8);
+dir.position.set(10,20,12); scene.add(dir);
+const dir2 = new THREE.DirectionalLight(0xfff2d8, 0.35);
+dir2.position.set(-10,-8,-14); scene.add(dir2);
+
+let gridMat = null;
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  if(gridMat) gridMat.resolution.set(innerWidth, innerHeight);
+});
+
+// ===================== 座標変換 =====================
+// th=筋(θ、輪)、z=段(φ、こちらも輪)。radiusOffsetは表面からの出っ張り量。
+// effTh: ゲーム内部の整数θはズレないが、見た目はφに比例して連続的にひねる
+//（境界だけでカクッと繋がる不格好さを避け、雑巾を絞ったような滑らかならせん状の曲面にする）。
+function effTh(angTh, angPh){ return angTh + angPh*TWIST_RATE; }
+function surfPoint(angTh, angPh, radiusOffset){
+  const a = effTh(angTh, angPh);
+  const rad = R + (r+radiusOffset)*Math.cos(a);
+  return new THREE.Vector3(rad*Math.cos(angPh), (r+radiusOffset)*Math.sin(a), rad*Math.sin(angPh));
+}
+function outwardDir(angTh, angPh){
+  const a = effTh(angTh, angPh);
+  return new THREE.Vector3(Math.cos(a)*Math.cos(angPh), Math.sin(a), Math.cos(a)*Math.sin(angPh));
+}
+function cellPos(thIdx, zIdx, radiusOffset){
+  return surfPoint(thetaOf(tin(thIdx)), phiOf(zIdx), radiusOffset||0);
+}
+function piecePos(thIdx, zIdx){
+  return cellPos(thIdx, zIdx, KOMA_T/2);
+}
+
+// 駒の向き：各セルで「筋方向=旧X軸」「盤面外向き=旧Y軸(重力の逆)」「奥行き方向(進行方向)=旧Z軸」
+const cellQuat = [];
+for(let ti=0; ti<N; ti++){
+  cellQuat[ti] = [];
+  for(let zi=0; zi<M; zi++){
+    const angTh = thetaOf(ti), angPh = phiOf(zi);
+    const a = effTh(angTh, angPh);
+    const dTheta = new THREE.Vector3(-Math.sin(a)*Math.cos(angPh), Math.cos(a), -Math.sin(a)*Math.sin(angPh));
+    const dOut   = outwardDir(angTh, angPh);
+    // dTheta×dOut = (sinφ,0,-cosφ) になるよう符号を合わせて右手系にする(左手系だとsetFromRotationMatrixの結果が歪み、駒が盤にめり込む)
+    const dFwd   = new THREE.Vector3(Math.sin(angPh), 0, -Math.cos(angPh));
+    const m = new THREE.Matrix4().makeBasis(dTheta, dOut, dFwd);
+    cellQuat[ti][zi] = new THREE.Quaternion().setFromRotationMatrix(m);
+  }
+}
+
+// ===================== 盤(木目の曲面) =====================
+function woodTexture(){
+  const c=document.createElement('canvas'); c.width=c.height=256;
+  const g=c.getContext('2d');
+  g.fillStyle='#a55c2c'; g.fillRect(0,0,256,256);
+  for(let i=0;i<52;i++){
+    g.strokeStyle='rgba(70,36,12,'+(0.06+Math.random()*0.14)+')';
+    g.lineWidth=1+Math.random()*2;
+    const y=Math.random()*256, d=(Math.random()-0.5)*14;
+    g.beginPath(); g.moveTo(0,y);
+    g.bezierCurveTo(85,y+d, 170,y-d, 256,y+d*0.6); g.stroke();
+  }
+  const tex=new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(N, Math.round(M/3));
+  return tex;
+}
+function buildSurfaceMesh(phiFrom, phiTo, phiSeg, material){
+  const thetaSeg = N*4;
+  const positions=[], uvs=[], indices=[];
+  for(let j=0;j<=phiSeg;j++){
+    const ph = phiFrom + (phiTo-phiFrom)*(j/phiSeg);
+    for(let i=0;i<=thetaSeg;i++){
+      const th = (i/thetaSeg)*Math.PI*2;
+      const p = surfPoint(th, ph, 0);
+      positions.push(p.x,p.y,p.z);
+      uvs.push(i/thetaSeg, j/phiSeg);
+    }
+  }
+  const stride = thetaSeg+1;
+  for(let j=0;j<phiSeg;j++) for(let i=0;i<thetaSeg;i++){
+    const a=j*stride+i, b=a+1, c=a+stride, d=c+1;
+    indices.push(a,c,b, b,c,d);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions,3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs,2));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  return new THREE.Mesh(geo, material);
+}
+(function buildBoard(){
+  // 壁が無く盤面は完全に一周する輪なので、φ0〜2πの全周を1枚の曲面として作る
+  const mat = new THREE.MeshLambertMaterial({map:woodTexture(), side:THREE.DoubleSide});
+  scene.add(buildSurfaceMesh(0, 2*Math.PI, M*4, mat));
+})();
+
+// ===================== グリッド線・マス目の点 =====================
+(function buildGrid(){
+  const pts = [];
+  const SEG = 3;
+  for(let i=0;i<N;i++){
+    const angTh = (i-0.5)*DTH;
+    for(let s=0;s<M*SEG;s++){
+      const ph0 = (s/(M*SEG))*Math.PI*2;
+      const ph1 = ((s+1)/(M*SEG))*Math.PI*2;
+      const p0 = surfPoint(angTh, ph0, 0.015), p1 = surfPoint(angTh, ph1, 0.015);
+      pts.push(p0.x,p0.y,p0.z, p1.x,p1.y,p1.z);
+    }
+  }
+  for(let j=0;j<M;j++){
+    const angPh = (j-0.5)*DPHI;
+    for(let s=0;s<N*SEG;s++){
+      const th0 = (s/(N*SEG))*Math.PI*2, th1 = ((s+1)/(N*SEG))*Math.PI*2;
+      const p0 = surfPoint(th0, angPh, 0.015), p1 = surfPoint(th1, angPh, 0.015);
+      pts.push(p0.x,p0.y,p0.z, p1.x,p1.y,p1.z);
+    }
+  }
+  if(THREE.LineSegments2 && THREE.LineMaterial && THREE.LineSegmentsGeometry){
+    const geo = new THREE.LineSegmentsGeometry(); geo.setPositions(pts);
+    gridMat = new THREE.LineMaterial({color:0x33220f, linewidth:2.2, transparent:true, opacity:0.85});
+    gridMat.resolution.set(innerWidth, innerHeight);
+    const seg = new THREE.LineSegments2(geo, gridMat); seg.computeLineDistances();
+    scene.add(seg);
+  } else {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+    scene.add(new THREE.LineSegments(g,
+      new THREE.LineBasicMaterial({color:0x33220f, transparent:true, opacity:0.8})));
+  }
+  const dotGeo = new THREE.CircleGeometry(0.06, 10);
+  const dotMat = new THREE.MeshBasicMaterial({color:0x2a1808});
+  for(let ti=0; ti<N; ti++) for(let zi=0; zi<M; zi++){
+    const p = cellPos(ti, zi, 0.018);
+    const d = new THREE.Mesh(dotGeo, dotMat);
+    d.position.copy(p);
+    d.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1), outwardDir(thetaOf(ti), phiOf(zi)));
+    scene.add(d);
+  }
+})();
+
+// 自陣/敵陣/緩衝地帯ラベル
+(function sideLabels(){
+  function lab(text, color, zIdx){
+    const c=document.createElement('canvas'); c.width=640; c.height=180;
+    const g=c.getContext('2d');
+    g.fillStyle=color; g.textAlign='center'; g.textBaseline='middle';
+    g.font="700 78px 'Yu Mincho','YuMincho','MS PMincho',serif";
+    g.fillText(text, 320, 96);
+    const t=new THREE.CanvasTexture(c);
+    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:t, transparent:true, depthTest:false}));
+    const pos = cellPos(4, zIdx, r*0.9);
+    sp.position.copy(pos); sp.scale.set(4.2, 1.18, 1);
+    sp.renderOrder=999; scene.add(sp);
+  }
+  lab('先手', '#1a56b0', SENTE_Z);
+  lab('後手', '#b02a1a', GOTE_Z);
+  lab('緩衝地帯', '#6a5a3a', BOARD_Z + Math.floor(BUFFER/2));
+})();
+
+// ===================== 駒（将棋駒形・面を外向き） =====================
+function komaGeometry(){
+  const s = new THREE.Shape();
+  const P = [[0,0.80],[0.60,0.30],[0.60,-0.62],[-0.60,-0.62],[-0.60,0.30]];
+  s.moveTo(P[0][0],P[0][1]);
+  for(let i=1;i<P.length;i++) s.lineTo(P[i][0],P[i][1]);
+  s.closePath();
+  const g = new THREE.ExtrudeGeometry(s, {depth:KOMA_T, bevelEnabled:false});
+  g.translate(0,0,-KOMA_T/2);
+  const pos=g.attributes.position, uv=g.attributes.uv;
+  let minX=1e9,maxX=-1e9,minY=1e9,maxY=-1e9;
+  for(let i=0;i<pos.count;i++){const x=pos.getX(i),y=pos.getY(i);
+    minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);}
+  for(let i=0;i<pos.count;i++){
+    uv.setXY(i,(pos.getX(i)-minX)/(maxX-minX),(pos.getY(i)-minY)/(maxY-minY));}
+  uv.needsUpdate=true;
+  return g;
+}
+const komaGeo = komaGeometry();
+const Q_FLAT  = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), -Math.PI/2);
+const Q_Y180  = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),  Math.PI);
+const Q_SENTE = Q_Y180.clone().multiply(Q_FLAT); // 先端が進行方向(奥)へ
+const Q_GOTE  = Q_FLAT.clone();                  // 先端が反対向き
+function pieceQuat(owner, th, z){
+  // dFwdを右手系にするため符号を反転した関係で、進行方向(奥)に先端を向けるのはGOTE側の回転になる
+  return cellQuat[tin(th)][z].clone().multiply(owner===SENTE ? Q_GOTE : Q_SENTE);
+}
+const matCache = {};
+function makeCanvas(ch, owner, promoted){
+  const c = document.createElement('canvas'); c.width = c.height = 200;
+  const g = c.getContext('2d');
+  const grad = g.createLinearGradient(0,0,0,200);
+  grad.addColorStop(0,'#ecd39c'); grad.addColorStop(1,'#dcbc7c');
+  g.fillStyle = grad; g.fillRect(0,0,200,200);
+  for(let i=0;i<24;i++){
+    g.strokeStyle='rgba(150,102,52,'+(0.05+Math.random()*0.11)+')';
+    g.lineWidth=1+Math.random()*1.6;
+    const y=Math.random()*200, d=(Math.random()-0.5)*12;
+    g.beginPath(); g.moveTo(0,y);
+    g.bezierCurveTo(66,y+d, 134,y-d, 200,y+d*0.6); g.stroke();
+  }
+  g.strokeStyle = owner===SENTE ? '#1a56b0' : '#b02a1a';
+  g.lineWidth = 15; g.strokeRect(10,10,180,180);
+  g.fillStyle = promoted ? '#8a1410' : '#20130a';
+  g.textAlign='center'; g.textBaseline='middle';
+  g.font = "700 124px 'HGSeikaishotaiPRO','HG正楷書体-PRO','Yu Mincho','YuMincho','MS PMincho',serif";
+  g.shadowColor='rgba(0,0,0,.2)'; g.shadowBlur=3;
+  g.fillText(ch, 100, 110);
+  return c;
+}
+const sideMat = new THREE.MeshBasicMaterial({color:0xd8bd82});
+function materialFor(p){
+  const key = kanjiOf(p)+'_'+p.owner+'_'+(p.promoted?'p':'n');
+  if(matCache[key]) return matCache[key];
+  const tex = new THREE.CanvasTexture(makeCanvas(kanjiOf(p), p.owner, p.promoted));
+  tex.anisotropy = 4;
+  const face = new THREE.MeshBasicMaterial({map:tex, side:THREE.DoubleSide});
+  const arr = [face, sideMat];
+  matCache[key] = arr; return arr;
+}
+
+// ===================== ゲーム状態 =====================
+let board, pieces, turn, selected, legalTargets, mode, gameOver, pendingPromo;
+const cursor = {th:4, z:SENTE_Z};
+
+// ===================== オンライン対戦 =====================
+let started = false, onlineMode = false, myColor = null;
+let sendMove = null, opponentId = null;
+let pendingMoveFrom = null, pendingMoveTo = null;
+
+function key(th,z){ return tin(th)+','+z; }
+
+function newPiece(type, owner, th, z){
+  const p = {type, owner, th: tin(th), z, promoted:false, mesh:null};
+  const mesh = new THREE.Mesh(komaGeo, materialFor(p));
+  mesh.quaternion.copy(pieceQuat(owner, p.th, p.z));
+  mesh.userData.piece = p;
+  mesh.position.copy(piecePos(p.th, p.z));
+  p.mesh = mesh; scene.add(mesh);
+  board[p.th][p.z] = p; pieces.push(p);
+  return p;
+}
+function refreshMesh(p){ p.mesh.material = materialFor(p); }
+
+// 伝統的な将棋の並び：香桂銀金玉金銀桂香(θ方向) + 飛角(1つ奥) + 歩9枚(さらに奥)
+const BACK_ORDER = ['L','N','S','G','K','G','S','N','L'];
+function setupSide(owner){
+  const z0 = owner===SENTE ? SENTE_Z : GOTE_Z;
+  const zf = owner===SENTE ? 1 : -1;
+  for(let i=0;i<N;i++) newPiece(BACK_ORDER[i], owner, i, z0);
+  const bishopTh = owner===SENTE ? 2 : 6;
+  const rookTh   = owner===SENTE ? 6 : 2;
+  newPiece('B', owner, bishopTh, z0+zf);
+  newPiece('R', owner, rookTh, z0+zf);
+  for(let i=0;i<N;i++) newPiece('P', owner, i, z0+zf*2);
+}
+
+function initGame(){
+  board = []; pieces = []; turn = SENTE; selected = null; legalTargets = [];
+  mode = 'select'; gameOver = false; pendingPromo = null;
+  for(let ti=0;ti<N;ti++){ board[ti]=new Array(M).fill(null); }
+  setupSide(SENTE); setupSide(GOTE);
+  cursor.th=4; cursor.z=SENTE_Z;
+  document.getElementById('win').style.display='none';
+  document.getElementById('promo').style.display='none';
+  updateCursorMesh(); updateHUD();
+}
+
+// ===================== 移動生成（θ,Z 2軸＝標準将棋の動き） =====================
+const ALL3 = [-1,0,1];
+function moveSpec(p){
+  const eff = effType(p);
+  let steps = [], rays = [];
+  const push = (arr,dth,dz)=>arr.push([dth,dz]);
+  if(eff==='P'){ push(steps,0,1); }
+  else if(eff==='L'){ push(rays,0,1); }
+  else if(eff==='N'){ push(steps,-1,2); push(steps,1,2); }
+  else if(eff==='S'){
+    push(steps,-1,1); push(steps,0,1); push(steps,1,1);
+    push(steps,-1,-1); push(steps,1,-1);
+  }
+  else if(eff==='G'){
+    push(steps,-1,1); push(steps,0,1); push(steps,1,1);
+    push(steps,-1,0); push(steps,1,0);
+    push(steps,0,-1);
+  }
+  else if(eff==='K'){
+    for(const dth of ALL3) for(const dz of ALL3) if(dth||dz) push(steps,dth,dz);
+  }
+  else if(eff==='R'){ push(rays,0,1); push(rays,0,-1); push(rays,1,0); push(rays,-1,0); }
+  else if(eff==='B'){ push(rays,1,1); push(rays,1,-1); push(rays,-1,1); push(rays,-1,-1); }
+  else if(eff==='R+'){
+    push(rays,0,1); push(rays,0,-1); push(rays,1,0); push(rays,-1,0);
+    push(steps,1,1); push(steps,1,-1); push(steps,-1,1); push(steps,-1,-1);
+  }
+  else if(eff==='B+'){
+    push(rays,1,1); push(rays,1,-1); push(rays,-1,1); push(rays,-1,-1);
+    push(steps,0,1); push(steps,0,-1); push(steps,1,0); push(steps,-1,0);
+  }
+  const f = p.owner===SENTE?1:-1;   // 前方向 = 先手Z+ / 後手Z-
+  steps = steps.map(d=>[d[0], d[1]*f]);
+  rays  = rays.map(d=>[d[0], d[1]*f]);
+  return {steps, rays};
+}
+
+function legalMoves(p){
+  const {steps, rays} = moveSpec(p);
+  const set = new Set(), res = [];
+  const add = (th,z)=>{ const k=key(th,z); if(!set.has(k)){ set.add(k); res.push({th:tin(th), z}); } };
+  for(const [dth,dz] of steps){
+    const {th:nth, z:nz} = stepCell(p.th, p.z, dth, dz);
+    const occ = board[nth][nz];
+    if(occ && occ.owner===p.owner) continue;
+    add(nth, nz);
+  }
+  for(const [dth,dz] of rays){
+    let cur = {th:p.th, z:p.z};
+    // ねじれの結果、遮る駒が無ければ最大N*M歩で発射地点に戻ってくる(盤全体を1周する1本道になる)。
+    // 発射地点セルに戻ったら停止し、念のため反復回数にも上限を設けて無限ループを防ぐ。
+    for(let i=0;i<N*M;i++){
+      const nxt = stepCell(cur.th, cur.z, dth, dz);
+      if(nxt.th===p.th && nxt.z===p.z) break;
+      const occ = board[nxt.th][nxt.z];
+      if(occ){ if(occ.owner!==p.owner) add(nxt.th, nxt.z); break; }
+      add(nxt.th, nxt.z);
+      cur = nxt;
+    }
+  }
+  return res;
+}
+
+// ===================== 成り =====================
+// 成りゾーン＝相手陣3段(標準将棋と同じ最奥3段)。緩衝地帯(z>=BOARD_Z)は成りゾーンに含めない。
+function inZone(owner,z){ return owner===SENTE ? (z>=6 && z<=8) : (z>=0 && z<=2); }
+function canPromote(p, fromZ){
+  return PROMOTABLE[p.type] && !p.promoted && (inZone(p.owner,p.z) || inZone(p.owner,fromZ));
+}
+
+// ===================== 選択・移動 =====================
+function selectPiece(p){
+  selected = p; legalTargets = legalMoves(p); mode='move';
+  buildTargetMarkers(); updateSelMesh(); updateHUD();
+}
+function deselect(){
+  selected=null; legalTargets=[]; mode='select';
+  buildTargetMarkers(); updateSelMesh(); updateHUD();
+}
+
+function movePieceOnBoard(p, t){
+  const cap = board[t.th][t.z];
+  board[p.th][p.z] = null;
+  if(cap){ const cpos = cap.mesh.position.clone(); removePiece(cap); spawnCaptureEffect(cpos, cap); }
+  p.th=tin(t.th); p.z=t.z; board[p.th][p.z]=p;
+  p.mesh.position.copy(piecePos(p.th,p.z));
+  p.mesh.quaternion.copy(pieceQuat(p.owner, p.th, p.z));
+  return cap;
+}
+function sendMoveIfOnline(from, to, promote){
+  if(onlineMode && sendMove) sendMove({from, to, promote});
+}
+
+function executeMove(t){
+  const p = selected;
+  const fromPos = {th:p.th, z:p.z};
+  const fromZ = p.z;
+  const cap = movePieceOnBoard(p, t);
+
+  if(cap && cap.type==='K'){ deselect(); endGame(p.owner); sendMoveIfOnline(fromPos, t, false); return; }
+
+  if(canPromote(p, fromZ)){
+    pendingPromo=p; pendingMoveFrom=fromPos; pendingMoveTo=t; deselect(); showPromo(true);
+    return;
+  }
+  finishTurn();
+  sendMoveIfOnline(fromPos, t, false);
+}
+
+function applyRemoteMove(msg){
+  const {from, to, promote} = msg;
+  const p = board[from.th][from.z];
+  if(!p) return;
+  const cap = movePieceOnBoard(p, to);
+  if(cap && cap.type==='K'){ deselect(); endGame(p.owner); return; }
+  if(promote){ p.promoted=true; refreshMesh(p); }
+  finishTurn();
+}
+function removePiece(p){
+  scene.remove(p.mesh);
+  const i=pieces.indexOf(p); if(i>=0) pieces.splice(i,1);
+  board[p.th][p.z]=null;
+}
+function finishTurn(){
+  deselect();
+  turn = 1-turn;
+  updateHUD();
+}
+
+// ===================== 成りプロンプト =====================
+function showPromo(on){ document.getElementById('promo').style.display = on?'flex':'none'; }
+function resolvePromo(yes){
+  if(!pendingPromo) return;
+  if(yes){ pendingPromo.promoted=true; refreshMesh(pendingPromo); }
+  const fromPos = pendingMoveFrom, toPos = pendingMoveTo;
+  pendingPromo=null; pendingMoveFrom=null; pendingMoveTo=null;
+  showPromo(false); finishTurn();
+  sendMoveIfOnline(fromPos, toPos, yes);
+}
+
+// ===================== 勝敗 =====================
+function endGame(winner){
+  gameOver=true;
+  document.getElementById('winMsg').textContent = (winner===SENTE?'先手':'後手')+'の勝ち！';
+  document.getElementById('win').style.display='flex';
+}
+
+// ===================== ハイライト用メッシュ =====================
+function wireBox(color, size){
+  const g = new THREE.BoxGeometry(size,size,size);
+  const e = new THREE.EdgesGeometry(g);
+  return new THREE.LineSegments(e, new THREE.LineBasicMaterial({color}));
+}
+const cursorMesh = wireBox(0x0a7fd0, 0.95); cursorMesh.material.linewidth=2; scene.add(cursorMesh);
+const selMesh = wireBox(0xe07a00, 1.0); selMesh.visible=false; scene.add(selMesh);
+const glowMesh = new THREE.Mesh(new THREE.BoxGeometry(0.95,0.95,0.95),
+  new THREE.MeshBasicMaterial({color:0xffe23a, transparent:true, opacity:0.0,
+    blending:THREE.AdditiveBlending, depthWrite:false}));
+glowMesh.visible=false; scene.add(glowMesh);
+// 現在の段(Z)を帯状にハイライト。ねじれ曲面はφに応じて姿勢が変わるため、回転させ回すのではなく
+// カーソルの段が変わるたびにその位置ぴったりの帯を作り直す。
+let sliceHighlight = null;
+function rebuildSliceHighlight(){
+  if(sliceHighlight){ scene.remove(sliceHighlight); sliceHighlight.geometry.dispose(); }
+  const angPh = phiOf(cursor.z);
+  sliceHighlight = buildSurfaceMesh(angPh-DPHI/2, angPh+DPHI/2, 6,
+    new THREE.MeshBasicMaterial({color:0xff8a1e, transparent:true, opacity:0.16,
+      side:THREE.DoubleSide, depthWrite:false}));
+  scene.add(sliceHighlight);
+}
+
+function placeMarker(mesh, th, z){
+  mesh.position.copy(cellPos(th, z, KOMA_T/2));
+  mesh.quaternion.copy(cellQuat[tin(th)][z]);
+}
+
+let targetMeshes = [];
+function buildTargetMarkers(){
+  targetMeshes.forEach(m=>scene.remove(m)); targetMeshes = [];
+  for(const t of legalTargets){
+    const occ = board[t.th][t.z];
+    const col = occ ? 0xd83020 : 0x1f9e3d;
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.9,0.9,0.9),
+      new THREE.MeshBasicMaterial({color:col, transparent:true, opacity:occ?0.4:0.32}));
+    placeMarker(m, t.th, t.z);
+    m.userData.target = t; scene.add(m); targetMeshes.push(m);
+  }
+}
+function updateCursorMesh(){
+  placeMarker(cursorMesh, cursor.th, cursor.z);
+  rebuildSliceHighlight();
+  const occ = board && board[cursor.th][cursor.z];
+  glowMesh.visible = !!occ;
+  if(occ){ placeMarker(glowMesh, cursor.th, cursor.z); }
+}
+function updateSelMesh(){
+  if(selected){ selMesh.visible=true; placeMarker(selMesh, selected.th, selected.z); }
+  else selMesh.visible=false;
+}
+
+// ===================== 撃破エフェクト（爆発・吹き飛び） =====================
+const effects = [];
+const BOOM_WORDS = ['メメタア','ズキュウン','ドキューン','ドロドアオーッ','ドリュウウーン','ズズオウウン','バァァァン'];
+function makeTextSprite(text, big){
+  const c=document.createElement('canvas'); c.width=768; c.height=384;
+  const g=c.getContext('2d');
+  const FONT = "px 'HGSoeiKakugothicUB','HG創英角ゴシックUB','HGゴシックE','MS Gothic','MSゴシック','Yu Gothic',sans-serif";
+  let fs = big?158:136;
+  const maxW = 768*0.78;
+  g.font = "900 "+fs+FONT;
+  const tw = g.measureText(text).width;
+  if(tw > maxW){ fs = Math.floor(fs*maxW/tw); g.font = "900 "+fs+FONT; }
+  g.textAlign='center'; g.textBaseline='middle';
+  g.translate(384,196);
+  g.transform(1,0,-0.26,1,0,0);
+  g.lineJoin='miter'; g.miterLimit=3;
+  g.strokeStyle='#000'; g.lineWidth=fs*0.20; g.strokeText(text,0,0);
+  g.fillStyle='#fff'; g.fillText(text,0,0);
+  const t=new THREE.CanvasTexture(c);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:t, transparent:true, depthTest:false}));
+  sp.renderOrder=1000; sp.material.rotation=(Math.random()-0.5)*0.4;
+  return sp;
+}
+function spawnCaptureEffect(pos, cap){
+  const palette = [0xe8d0a0, 0xd8b878, 0xc19a5a, 0x9c7238, 0x6e4b23];
+  const parts = [], group = new THREE.Group();
+  const king = cap.type==='K';
+  const n = king ? 120 : 54;
+  const power = king ? 3.0 : 2.0;
+  for(let i=0;i<n;i++){
+    const shard = Math.random()<0.5;
+    const geo = shard
+      ? new THREE.BoxGeometry(0.07, 0.07, 0.3+Math.random()*0.5)
+      : new THREE.BoxGeometry(0.12+Math.random()*0.22, 0.12+Math.random()*0.22, 0.12+Math.random()*0.22);
+    const m = new THREE.Mesh(geo,
+      new THREE.MeshBasicMaterial({color: palette[(Math.random()*palette.length)|0], transparent:true}));
+    m.position.copy(pos);
+    const dir = new THREE.Vector3(Math.random()-0.5, Math.random()*0.55+0.05, Math.random()-0.5).normalize();
+    parts.push({mesh:m,
+      vel: dir.multiplyScalar((5+Math.random()*9)*power),
+      av: new THREE.Vector3((Math.random()-0.5)*26,(Math.random()-0.5)*26,(Math.random()-0.5)*26)});
+    group.add(m);
+  }
+  scene.add(group);
+  const word = king ? 'ザ・ワールド！' : BOOM_WORDS[(Math.random()*BOOM_WORDS.length)|0];
+  const txt = makeTextSprite(word, king);
+  txt.position.copy(pos); txt.position.y += 0.4; scene.add(txt);
+  const toCam = new THREE.Vector3().subVectors(camera.position, pos).normalize();
+  const txtVel = toCam.multiplyScalar(1.6).add(new THREE.Vector3(0, 0.8, 0));
+  effects.push({group, parts, txt, txtVel, life:0, dur: king?1.7:1.0, pdur: king?2.0:1.25});
+}
+function updateEffects(dt){
+  for(let i=effects.length-1;i>=0;i--){
+    const e=effects[i]; e.life+=dt;
+    const pt = Math.min(1, e.life/e.pdur);
+    for(const p of e.parts){
+      p.vel.y -= 16*dt;
+      p.mesh.position.addScaledVector(p.vel, dt);
+      p.mesh.rotation.x+=p.av.x*dt; p.mesh.rotation.y+=p.av.y*dt; p.mesh.rotation.z+=p.av.z*dt;
+      p.mesh.material.opacity = Math.max(0, 1-pt*pt);
+      p.mesh.scale.setScalar(Math.max(0.02, 1-pt*0.5));
+    }
+    if(e.txt){
+      const tt = Math.min(1, e.life/e.dur);
+      let s;
+      if(tt<0.18) s = tt/0.18;
+      else if(tt<0.34) s = 1 + 0.16*(1-(tt-0.18)/0.16);
+      else s = 1;
+      const base = e.dur>1.2 ? 7.5 : 5.6;
+      e.txt.scale.set(base*s, base*0.5*s, 1);
+      e.txt.position.addScaledVector(e.txtVel, dt);
+      e.txt.material.opacity = tt<0.5 ? 1 : Math.max(0, 1-(tt-0.5)/0.5);
+      if(tt>=1){ scene.remove(e.txt); e.txt.material.map.dispose(); e.txt.material.dispose(); e.txt=null; }
+    }
+    if(e.life>=e.pdur){
+      scene.remove(e.group);
+      e.parts.forEach(p=>{p.mesh.geometry.dispose(); p.mesh.material.dispose();});
+      if(e.txt){ scene.remove(e.txt); e.txt.material.map.dispose(); e.txt.material.dispose(); }
+      effects.splice(i,1);
+    }
+  }
+}
+
+// ===================== HUD =====================
+function pieceLabel(p){
+  const name = kanjiOf(p);
+  return (p.owner===SENTE?'先手 ':'後手 ')+name;
+}
+function updateHUD(){
+  document.getElementById('turnLabel').textContent = turn===SENTE?'先手番':'後手番';
+  const turnHint = document.getElementById('turnHint');
+  if(onlineMode){
+    turnHint.textContent = (turn===myColor) ? 'あなたの番です' : '相手の番を待っています…';
+  } else {
+    turnHint.textContent = '手番の駒を選んでください';
+  }
+  document.getElementById('curPos').textContent =
+    '筋'+(cursor.th+1)+' / '+zLabel(cursor.z);
+  const occ = board[cursor.th][cursor.z];
+  document.getElementById('curCell').textContent = occ ? pieceLabel(occ) : '空き';
+  const selLine = document.getElementById('selLine');
+  if(selected){ selLine.style.display='block';
+    document.getElementById('selInfo').textContent = pieceLabel(selected)+'（移動先を選択）'; }
+  else selLine.style.display='none';
+}
+
+// ===================== オンライン対戦：モード選択・マッチング =====================
+let trysteroMod = null;
+function ensureTrystero(){
+  if(!trysteroMod) trysteroMod = import('https://esm.run/trystero');
+  return trysteroMod;
+}
+function randomRoomCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s=''; for(let i=0;i<5;i++) s+=chars[(Math.random()*chars.length)|0];
+  return s;
+}
+document.getElementById('roomCodeInput').value = randomRoomCode();
+
+document.getElementById('btnLocal').onclick = ()=>{
+  document.getElementById('modeSelect').style.display='none';
+  started = true;
+};
+document.getElementById('btnOnline').onclick = ()=>{
+  document.getElementById('modeSelect').style.display='none';
+  document.getElementById('onlineSetup').style.display='flex';
+};
+document.getElementById('btnStartOnline').onclick = ()=>{
+  const code = document.getElementById('roomCodeInput').value.trim().toUpperCase();
+  if(!code) return;
+  document.getElementById('btnStartOnline').disabled = true;
+  document.getElementById('roomCodeInput').disabled = true;
+  document.getElementById('onlineStatus').textContent = '対戦相手を待っています…';
+  startOnlineMatch(code);
+};
+
+async function startOnlineMatch(code){
+  let T;
+  try{ T = await ensureTrystero(); }
+  catch(e){
+    document.getElementById('onlineStatus').textContent =
+      'オンライン対戦ライブラリの読み込みに失敗しました。インターネット接続を確認してください。';
+    return;
+  }
+  const { joinRoom, selfId } = T;
+  const room = joinRoom({appId:'sanjigen-shogi-torus-twist-v1'}, code);
+  const move = room.makeAction('move');
+  sendMove = data => move.send(data);
+  move.onMessage = (data, meta)=>{
+    if(started && meta.peerId===opponentId) applyRemoteMove(data);
+  };
+  room.onPeerJoin = id=>{
+    if(opponentId) return;
+    opponentId = id;
+    myColor = (selfId < id) ? SENTE : GOTE;
+    onlineMode = true;
+    document.getElementById('onlineSetup').style.display='none';
+    revealColorAndStart();
+  };
+  room.onPeerLeave = id=>{
+    if(id===opponentId) document.getElementById('onlineStatus').textContent = '対戦相手が切断しました。';
+  };
+}
+
+function revealColorAndStart(){
+  const el = document.getElementById('colorReveal');
+  document.getElementById('colorRevealMsg').textContent =
+    'あなたは ' + (myColor===SENTE ? '先手（青）' : '後手（赤）') + ' です';
+  el.style.display='flex';
+  setTimeout(()=>{ el.style.display='none'; started=true; updateHUD(); }, 1800);
+}
+
+// ===================== 入力 =====================
+function tryConfirm(){
+  if(gameOver||pendingPromo) return;
+  if(onlineMode && turn!==myColor) return;
+  const occ = board[cursor.th][cursor.z];
+  if(mode==='select'){
+    if(occ && occ.owner===turn) selectPiece(occ);
+  } else {
+    if(occ && occ.owner===turn){ selectPiece(occ); return; }
+    const t = legalTargets.find(t=>t.th===cursor.th&&t.z===cursor.z);
+    if(t) executeMove(t);
+  }
+}
+
+addEventListener('keydown', e=>{
+  if(!started) return;
+  if(pendingPromo){
+    if(e.key==='y'||e.key==='Y') resolvePromo(true);
+    else if(e.key==='n'||e.key==='N') resolvePromo(false);
+    return;
+  }
+  if(e.key==='r'||e.key==='R'){ if(!onlineMode) initGame(); return; }
+  if(gameOver) return;
+  let handled = true;
+  switch(e.key){
+    case 'ArrowLeft':  cursor.th=tin(cursor.th-1); break;
+    case 'ArrowRight': cursor.th=tin(cursor.th+1); break;
+    case 'ArrowUp':    cursor.z=(cursor.z+1)%M; break;
+    case 'ArrowDown':  cursor.z=(cursor.z-1+M)%M; break;
+    case 'Enter': case ' ': tryConfirm(); break;
+    case 'Escape': deselect(); break;
+    default: handled=false;
+  }
+  if(handled){ e.preventDefault(); updateCursorMesh(); updateHUD(); }
+}, {passive:false});
+
+// ===================== マウス選択 =====================
+const raycaster = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+let down = null;
+renderer.domElement.addEventListener('pointerdown', e=>{ down={x:e.clientX,y:e.clientY,t:Date.now()}; });
+renderer.domElement.addEventListener('pointerup', e=>{
+  if(!down) return;
+  const moved = Math.hypot(e.clientX-down.x, e.clientY-down.y);
+  const quick = Date.now()-down.t < 400;
+  down=null;
+  if(moved>6 || !quick) return;
+  if(!started || gameOver || pendingPromo) return;
+  if(onlineMode && turn!==myColor) return;
+  ndc.x = (e.clientX/innerWidth)*2-1;
+  ndc.y = -(e.clientY/innerHeight)*2+1;
+  raycaster.setFromCamera(ndc, camera);
+  const objs = targetMeshes.concat(pieces.map(p=>p.mesh));
+  const hits = raycaster.intersectObjects(objs, false);
+  if(!hits.length) return;
+  const o = hits[0].object;
+  if(o.userData.target){
+    const t=o.userData.target; cursor.th=t.th;cursor.z=t.z; updateCursorMesh();
+    if(mode==='move') executeMove(t);
+  } else if(o.userData.piece){
+    const p=o.userData.piece; cursor.th=p.th;cursor.z=p.z; updateCursorMesh();
+    if(p.owner===turn) selectPiece(p);
+  }
+  updateHUD();
+});
+
+// ===================== ループ =====================
+let lastT = performance.now();
+function animate(){
+  requestAnimationFrame(animate);
+  const now = performance.now(); const dt = Math.min(0.05, (now-lastT)/1000); lastT = now;
+  controls.update();
+  cursorMesh.material.opacity = 0.5 + 0.5*Math.abs(Math.sin(Date.now()*0.004));
+  cursorMesh.material.transparent = true;
+  if(glowMesh.visible) glowMesh.material.opacity = 0.32 + 0.28*Math.abs(Math.sin(Date.now()*0.005));
+  updateEffects(dt);
+  renderer.render(scene, camera);
+}
+
+initGame();
+animate();
+}
+</script>
+</body>
+</html>

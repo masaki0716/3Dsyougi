@@ -1,0 +1,865 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>立体将棋 — 9×9×9</title>
+<style>
+  :root{
+    --ink:#2a2018; --gold:#8a6a1e; --brush:'Yu Mincho','YuMincho','HGSeikaishotaiPRO','HG正楷書体-PRO','MS PMincho',serif;
+  }
+  html,body{margin:0;height:100%;overflow:hidden;background:#f5f1e8;color:var(--ink);
+    font-family:var(--brush);}
+  #app{position:fixed;inset:0;}
+  canvas{display:block;}
+  .panel{position:fixed;background:rgba(255,253,248,.85);border:1px solid rgba(138,106,30,.4);
+    border-radius:10px;padding:10px 14px;backdrop-filter:blur(3px);pointer-events:none;
+    box-shadow:0 4px 18px rgba(80,60,20,.18);}
+  #legend{left:14px;bottom:14px;line-height:1.7;font-size:14px;max-width:290px;
+    background:rgba(255,253,248,.45);}
+  #legend h3{margin:0 0 6px;font-size:16px;letter-spacing:.15em;color:var(--gold);}
+  #legend b{color:#111;font-weight:700;}
+  #legend .k{display:inline-block;min-width:74px;color:var(--gold);}
+  #turn{left:50%;top:12px;transform:translateX(-50%);text-align:center;font-size:22px;
+    letter-spacing:.3em;padding:8px 26px;}
+  #turn small{display:block;font-size:12px;letter-spacing:.1em;opacity:.75;margin-top:2px;}
+  #info{right:14px;top:14px;font-size:14px;line-height:1.8;min-width:150px;}
+  #info .val{color:#111;}
+  .big{position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+    flex-direction:column;background:rgba(245,241,232,.82);z-index:20;}
+  .big .msg{font-size:64px;letter-spacing:.2em;color:#7a1810;
+    text-shadow:0 2px 4px rgba(0,0,0,.15);}
+  .big button{margin-top:26px;font-family:var(--brush);font-size:20px;letter-spacing:.2em;
+    color:var(--ink);background:#fff8ec;border:1px solid var(--gold);border-radius:8px;
+    padding:10px 30px;cursor:pointer;}
+  .big button:hover{background:#f0e6d2;}
+  #promo{gap:6px;}
+  #promo .msg{font-size:40px;}
+  #promo .sub{font-size:18px;letter-spacing:.15em;opacity:.85;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="turn" class="panel"><span id="turnLabel">先手番</span><small id="turnHint">手番の駒を選んでください</small></div>
+
+<div id="info" class="panel">
+  <div>カーソル <span class="val" id="curPos">-</span></div>
+  <div>マス <span class="val" id="curCell">空き</span></div>
+  <div id="selLine" style="display:none">選択 <span class="val" id="selInfo">-</span></div>
+</div>
+
+<div id="legend" class="panel">
+  <h3>操作方法</h3>
+  <div><span class="k">← →</span> X軸（行）</div>
+  <div><span class="k">↑ ↓</span> Y軸（列）</div>
+  <div><span class="k">PageUp/Dn</span> Z軸（段・奥行き）</div>
+  <div><span class="k">Enter/Space</span> 選択 / 移動</div>
+  <div><span class="k">Esc</span> 選択解除</div>
+  <div><span class="k">マウス</span> ドラッグで回転・ホイールでズーム</div>
+  <div><span class="k">クリック</span> 駒選択・移動先指定</div>
+  <div><span class="k">R</span> 最初から</div>
+  <div style="margin-top:6px;opacity:.75">自陣=手前(Z1)・敵陣=奥(Z9)／<b>王を取れば勝ち</b></div>
+</div>
+
+<div id="promo" class="big">
+  <div class="msg">成りますか？</div>
+  <div class="sub"><b>Y</b> = 成る　　<b>N</b> = 不成</div>
+</div>
+
+<div id="win" class="big">
+  <div class="msg" id="winMsg">先手の勝ち！</div>
+  <button onclick="location.reload()">もう一局（R）</button>
+</div>
+
+<div id="err" class="big" style="background:#15120d">
+  <div class="msg" style="font-size:26px;color:#e88">Three.js を読み込めませんでした。<br>インターネット接続を確認して再読み込みしてください。</div>
+</div>
+
+<div id="modeSelect" class="big" style="display:flex">
+  <div class="msg" style="font-size:34px">対局モードを選択</div>
+  <div style="display:flex;gap:16px;margin-top:26px">
+    <button id="btnLocal">この画面で2人対戦</button>
+    <button id="btnOnline">誰かと対戦（オンライン）</button>
+  </div>
+</div>
+
+<div id="onlineSetup" class="big">
+  <div class="msg" style="font-size:28px">オンライン対戦</div>
+  <div style="margin-top:14px;font-size:14px;letter-spacing:.1em;opacity:.8">対局コード</div>
+  <input id="roomCodeInput" maxlength="8" style="font-size:22px;letter-spacing:.25em;text-align:center;
+    width:190px;margin-top:8px;padding:8px;border:1px solid var(--gold);border-radius:6px;
+    background:#fff8ec;color:var(--ink);font-family:var(--brush)">
+  <div style="margin-top:12px;font-size:14px;max-width:340px;text-align:center;line-height:1.7;opacity:.85">
+    このコードを対戦相手に伝えてください。相手が同じコードで参加すると、そろい次第自動で対戦が始まります。
+  </div>
+  <button id="btnStartOnline" style="margin-top:20px">このコードで開始 / 参加</button>
+  <div id="onlineStatus" style="margin-top:16px;font-size:16px;letter-spacing:.1em"></div>
+</div>
+
+<div id="colorReveal" class="big">
+  <div class="msg" id="colorRevealMsg" style="font-size:42px">あなたは 先手（青） です</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/lines/LineSegmentsGeometry.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/lines/LineSegments2.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/lines/LineMaterial.js"></script>
+<script>
+if(typeof THREE==='undefined'){ document.getElementById('err').style.display='flex'; }
+else { main(); }
+
+function main(){
+'use strict';
+
+// ===================== 定数 =====================
+const N = 9;
+const SENTE = 0, GOTE = 1;
+const S = 1.6, O = (N-1)/2;           // マス間隔・中心オフセット
+const w = i => (i - O) * S;           // 格子index -> world座標
+const KOMA_T = 0.32;                  // 駒の厚み
+const PIECE_Y = -S/2 + KOMA_T/2;      // 駒をセルの底に接地させるYオフセット
+
+// 駒種: K王 G金 S銀 N桂 L香 R飛 B角 P歩
+const KANJI = {K:'王',G:'金',S:'銀',N:'桂',L:'香',R:'飛',B:'角',P:'歩'};
+const KANJI_GOTE_K = '玉';
+const PROMO_KANJI = {P:'と',L:'杏',N:'圭',S:'全',R:'龍',B:'馬'};
+const PROMOTABLE = {P:1,L:1,N:1,S:1,R:1,B:1};
+
+function kanjiOf(p){
+  if(p.promoted) return PROMO_KANJI[p.type];
+  if(p.type==='K') return p.owner===GOTE ? KANJI_GOTE_K : KANJI.K;
+  return KANJI[p.type];
+}
+// 成り後の実効タイプ
+function effType(p){
+  if(!p.promoted) return p.type;
+  if(p.type==='R') return 'R+';
+  if(p.type==='B') return 'B+';
+  return 'G';
+}
+
+// ===================== three.js 基盤 =====================
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf5f1e8);
+scene.fog = new THREE.Fog(0xf5f1e8, 32, 62);
+
+const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 200);
+camera.position.set(0.5, 19, -12);   // 先手（Z1）が手前に来る高い俯瞰アングル
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth, innerHeight);
+document.getElementById('app').appendChild(renderer.domElement);
+
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.enablePan = false;
+controls.minDistance = 8;
+controls.maxDistance = 46;
+controls.target.set(0,0,0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.66));
+const dir = new THREE.DirectionalLight(0xfff2d8, 0.8);
+dir.position.set(6,12,8); scene.add(dir);
+
+let gridMat = null, surfMat = null;
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  if(gridMat) gridMat.resolution.set(innerWidth, innerHeight);
+  if(surfMat) surfMat.resolution.set(innerWidth, innerHeight);
+});
+
+// ===================== 格子（透ける） =====================
+(function buildGrid(){
+  const gp = k => (k - N/2) * S;   // セル境界線の位置（k=0..N の N+1 本）駒はマスの中心に入る
+  const lo = gp(0), hi = gp(N);
+  const pts = [];
+  for(let i=0;i<=N;i++) for(let j=0;j<=N;j++){
+    pts.push(lo, gp(i), gp(j),  hi, gp(i), gp(j));   // X方向
+    pts.push(gp(i), lo, gp(j),  gp(i), hi, gp(j));   // Y方向
+    pts.push(gp(i), gp(j), lo,  gp(i), gp(j), hi);   // Z方向
+  }
+  if(THREE.LineSegments2 && THREE.LineMaterial && THREE.LineSegmentsGeometry){
+    const geo = new THREE.LineSegmentsGeometry(); geo.setPositions(pts);
+    gridMat = new THREE.LineMaterial({color:0x141414, linewidth:1.6, transparent:true, opacity:0.55});
+    gridMat.resolution.set(innerWidth, innerHeight);
+    const seg = new THREE.LineSegments2(geo, gridMat); seg.computeLineDistances();
+    scene.add(seg);
+  } else {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+    scene.add(new THREE.LineSegments(g,
+      new THREE.LineBasicMaterial({color:0x141414, transparent:true, opacity:0.45})));
+  }
+})();
+
+// 盤（立体・厚み2セル・端に余白）
+(function buildBoard(){
+  const c=document.createElement('canvas'); c.width=c.height=256;
+  const g=c.getContext('2d');
+  g.fillStyle='#a55c2c'; g.fillRect(0,0,256,256);      // オレンジがかった濃い木目色
+  for(let i=0;i<52;i++){                                // 木目のスジ
+    g.strokeStyle='rgba(70,36,12,'+(0.06+Math.random()*0.14)+')';
+    g.lineWidth=1+Math.random()*2;
+    const y=Math.random()*256, d=(Math.random()-0.5)*14;
+    g.beginPath(); g.moveTo(0,y);
+    g.bezierCurveTo(85,y+d, 170,y-d, 256,y+d*0.6); g.stroke();
+  }
+  const tex=new THREE.CanvasTexture(c);
+  const margin = 0.8*S;                                 // 端の余白
+  const wide = N*S + 2*margin;
+  const thick = 2*S;                                    // 厚み2セル分
+  const board = new THREE.Mesh(new THREE.BoxGeometry(wide, thick, wide),
+    new THREE.MeshLambertMaterial({map:tex}));
+  board.position.set(0, (-N/2)*S - thick/2, 0);        // 上面＝最下段の底
+  scene.add(board);
+})();
+
+// 盤面（最下面）の格子＝少し太く＋交点に「・」
+(function buildSurfaceGrid(){
+  const gp = k => (k - N/2) * S;
+  const y0 = (-N/2) * S + 0.02;             // 盤上面のすぐ上
+  const lo = gp(0), hi = gp(N);
+  const pts = [];
+  for(let i=0;i<=N;i++){
+    pts.push(lo, y0, gp(i),  hi, y0, gp(i));   // X方向
+    pts.push(gp(i), y0, lo,  gp(i), y0, hi);   // Z方向
+  }
+  if(THREE.LineSegments2 && THREE.LineMaterial && THREE.LineSegmentsGeometry){
+    const geo = new THREE.LineSegmentsGeometry(); geo.setPositions(pts);
+    surfMat = new THREE.LineMaterial({color:0x33220f, linewidth:3.4, transparent:true, opacity:0.92});
+    surfMat.resolution.set(innerWidth, innerHeight);
+    const seg = new THREE.LineSegments2(geo, surfMat); seg.computeLineDistances(); scene.add(seg);
+  } else {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+    scene.add(new THREE.LineSegments(g,
+      new THREE.LineBasicMaterial({color:0x33220f, transparent:true, opacity:0.9})));
+  }
+  // 交点の「・」
+  const dotGeo = new THREE.CircleGeometry(0.085, 14);
+  const dotMat = new THREE.MeshBasicMaterial({color:0x2a1808});
+  for(let i=0;i<=N;i++) for(let j=0;j<=N;j++){
+    const d = new THREE.Mesh(dotGeo, dotMat);
+    d.rotation.x = -Math.PI/2;
+    d.position.set(gp(i), y0+0.01, gp(j));
+    scene.add(d);
+  }
+})();
+
+// 自陣/敵陣ラベル
+(function sideLabels(){
+  function lab(text, color, z){
+    const c=document.createElement('canvas'); c.width=640; c.height=180;
+    const g=c.getContext('2d');
+    g.fillStyle=color; g.textAlign='center'; g.textBaseline='middle';
+    g.font="700 78px 'Yu Mincho','YuMincho','MS PMincho',serif";
+    g.fillText(text, 320, 96);
+    const t=new THREE.CanvasTexture(c);
+    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:t, transparent:true, depthTest:false}));
+    sp.position.set(0, w(0)-2.4, z); sp.scale.set(6.6, 1.86, 1);
+    sp.renderOrder=999; scene.add(sp);
+  }
+  lab('先手（手前）', '#1a56b0', w(0));
+  lab('後手（奥）',   '#b02a1a', w(N-1));
+})();
+
+// ===================== 駒（将棋駒形・面を上向き） =====================
+// 先端(+y')に尖った将棋駒シルエット。寝かせて面を上に向け、先端を進行方向(±z)へ。
+function komaGeometry(){
+  const s = new THREE.Shape();
+  const P = [[0,0.80],[0.60,0.30],[0.60,-0.62],[-0.60,-0.62],[-0.60,0.30]]; // 先端=上
+  s.moveTo(P[0][0],P[0][1]);
+  for(let i=1;i<P.length;i++) s.lineTo(P[i][0],P[i][1]);
+  s.closePath();
+  const g = new THREE.ExtrudeGeometry(s, {depth:KOMA_T, bevelEnabled:false});
+  g.translate(0,0,-KOMA_T/2);
+  const pos=g.attributes.position, uv=g.attributes.uv;
+  let minX=1e9,maxX=-1e9,minY=1e9,maxY=-1e9;
+  for(let i=0;i<pos.count;i++){const x=pos.getX(i),y=pos.getY(i);
+    minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);}
+  for(let i=0;i<pos.count;i++){
+    uv.setXY(i,(pos.getX(i)-minX)/(maxX-minX),(pos.getY(i)-minY)/(maxY-minY));}
+  uv.needsUpdate=true;
+  return g;
+}
+const komaGeo = komaGeometry();
+// 寝かせる：面法線を +Y（上）へ、先端を進行方向へ
+const Q_FLAT  = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), -Math.PI/2);
+const Q_Y180  = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),  Math.PI);
+const Q_SENTE = Q_Y180.clone().multiply(Q_FLAT); // 先端 +Z（奥へ）
+const Q_GOTE  = Q_FLAT.clone();                  // 先端 -Z（手前へ）
+const texCache = {};
+function makeCanvas(ch, owner, promoted){
+  const c = document.createElement('canvas'); c.width = c.height = 200;
+  const g = c.getContext('2d');
+  const grad = g.createLinearGradient(0,0,0,200);
+  grad.addColorStop(0,'#ecd39c'); grad.addColorStop(1,'#dcbc7c');
+  g.fillStyle = grad; g.fillRect(0,0,200,200);
+  // 木目のスジ
+  for(let i=0;i<24;i++){
+    g.strokeStyle='rgba(150,102,52,'+(0.05+Math.random()*0.11)+')';
+    g.lineWidth=1+Math.random()*1.6;
+    const y=Math.random()*200, d=(Math.random()-0.5)*12;
+    g.beginPath(); g.moveTo(0,y);
+    g.bezierCurveTo(66,y+d, 134,y-d, 200,y+d*0.6); g.stroke();
+  }
+  // チーム色の縁取り（先手=青／後手=赤）
+  g.strokeStyle = owner===SENTE ? '#1a56b0' : '#b02a1a';
+  g.lineWidth = 15; g.strokeRect(10,10,180,180);
+  // 墨（筆風）
+  g.fillStyle = promoted ? '#8a1410' : '#20130a';
+  g.textAlign='center'; g.textBaseline='middle';
+  g.font = "700 124px 'HGSeikaishotaiPRO','HG正楷書体-PRO','Yu Mincho','YuMincho','MS PMincho',serif";
+  g.shadowColor='rgba(0,0,0,.2)'; g.shadowBlur=3;
+  g.fillText(ch, 100, 110);
+  return c;
+}
+// テクスチャ（見た目）は種類ごとに共有キャッシュ、マテリアルは駒ごとに個別インスタンス
+// （選択中の段だけ強調するため、駒単位で opacity を独立制御できるようにする）
+function textureFor(p){
+  const key = kanjiOf(p)+'_'+p.owner+'_'+(p.promoted?'p':'n');
+  if(texCache[key]) return texCache[key];
+  const tex = new THREE.CanvasTexture(makeCanvas(kanjiOf(p), p.owner, p.promoted));
+  tex.anisotropy = 4;
+  texCache[key] = tex; return tex;
+}
+function materialFor(p){
+  const face = new THREE.MeshBasicMaterial({map:textureFor(p), side:THREE.DoubleSide, transparent:true});
+  const side = new THREE.MeshBasicMaterial({color:0xd8bd82, transparent:true}); // 駒の側面（木口）
+  return [face, side]; // ExtrudeGeometry: 0=表裏面, 1=側面
+}
+
+// ===================== ゲーム状態 =====================
+let board, pieces, turn, selected, legalTargets, mode, gameOver, pendingPromo;
+const cursor = {x:4, y:4, z:0};
+
+// ===================== オンライン対戦 =====================
+// 手番の入力操作は started が立つまで（モード選択/マッチング待ち中）は無効。
+let started = false, onlineMode = false, myColor = null;
+let sendMove = null, opponentId = null;
+let pendingMoveFrom = null, pendingMoveTo = null;
+
+function inb(v){ return v>=0 && v<N; }
+function key(x,y,z){ return x+','+y+','+z; }
+
+function newPiece(type, owner, x, y, z){
+  const p = {type, owner, x, y, z, promoted:false, mesh:null};
+  const mesh = new THREE.Mesh(komaGeo, materialFor(p));
+  mesh.quaternion.copy(owner===SENTE ? Q_SENTE : Q_GOTE); // 面を上向き・先端は進行方向
+  mesh.userData.piece = p;
+  mesh.position.set(w(x), w(y)+PIECE_Y, w(z));
+  p.mesh = mesh; scene.add(mesh);
+  board[x][y][z] = p; pieces.push(p);
+  return p;
+}
+function refreshMesh(p){ p.mesh.material = materialFor(p); }
+
+// 中心からのチェビシェフ距離でリング配置
+function ringType(x,y){
+  const r = Math.max(Math.abs(x-4), Math.abs(y-4));
+  return r===0?'K': r===1?'G': r===2?'S': r===3?'N':'L';
+}
+function setupSide(owner){
+  const z1 = owner===SENTE?0:8, z2 = owner===SENTE?1:7, z3 = owner===SENTE?2:6;
+  // Z1: 王金銀桂香の同心リング（81マス）
+  for(let x=0;x<N;x++) for(let y=0;y<N;y++) newPiece(ringType(x,y), owner, x, y, z1);
+  // Z2: 飛×3, 角×3
+  for(const y of [2,4,6]) newPiece('R', owner, 3, y, z2); // 飛 (表示[4,3/5/7])
+  for(const y of [2,4,6]) newPiece('B', owner, 5, y, z2); // 角 (表示[6,3/5/7])
+  // Z3: 歩×81
+  for(let x=0;x<N;x++) for(let y=0;y<N;y++) newPiece('P', owner, x, y, z3);
+}
+
+function initGame(){
+  board = []; pieces = []; turn = SENTE; selected = null; legalTargets = [];
+  mode = 'select'; gameOver = false; pendingPromo = null;
+  for(let x=0;x<N;x++){ board[x]=[]; for(let y=0;y<N;y++){ board[x][y]=new Array(N).fill(null); } }
+  setupSide(SENTE); setupSide(GOTE);
+  cursor.x=4; cursor.y=4; cursor.z=0;
+  document.getElementById('win').style.display='none';
+  document.getElementById('promo').style.display='none';
+  updateCursorMesh(); updateHUD();
+}
+
+// ===================== 移動生成 =====================
+const ALL3 = [-1,0,1];
+function moveSpec(p){
+  const eff = effType(p);
+  let steps = [], rays = [], jump = false;
+  const push = (arr,dx,dy,dz)=>arr.push([dx,dy,dz]);
+  if(eff==='P'){ push(steps,0,0,1); }
+  else if(eff==='L'){ push(rays,0,0,1); }
+  else if(eff==='N'){ jump=true; for(const dx of ALL3) for(const dy of ALL3) if(dx||dy) push(steps,dx,dy,2); }
+  else if(eff==='S'){
+    for(const dx of ALL3) for(const dy of ALL3) push(steps,dx,dy,1);          // 前面9
+    for(const dx of ALL3) for(const dy of ALL3) if(dx||dy) push(steps,dx,dy,-1); // 斜め後ろ8
+  }
+  else if(eff==='G'){
+    for(const dx of ALL3) for(const dy of ALL3) push(steps,dx,dy,1);          // 前面9
+    for(const dx of ALL3) for(const dy of ALL3) if(dx||dy) push(steps,dx,dy,0);  // 同層8
+    push(steps,0,0,-1);                                                        // 真後ろ1
+  }
+  else if(eff==='K'){
+    for(const dx of ALL3) for(const dy of ALL3) for(const dz of ALL3) if(dx||dy||dz) push(steps,dx,dy,dz);
+  }
+  else if(eff==='R'){ [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]].forEach(d=>rays.push(d)); }
+  else if(eff==='B'){
+    // 斜め＝2軸以上動く全20方向（辺12＋角8）へ走り
+    for(const dx of ALL3) for(const dy of ALL3) for(const dz of ALL3){
+      if(((dx?1:0)+(dy?1:0)+(dz?1:0))>=2) push(rays,dx,dy,dz);
+    }
+  }
+  else if(eff==='R+'){
+    [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]].forEach(d=>rays.push(d));
+    for(const dx of ALL3) for(const dy of ALL3) for(const dz of ALL3) if(dx||dy||dz) push(steps,dx,dy,dz);
+  }
+  else if(eff==='B+'){
+    for(const dx of ALL3) for(const dy of ALL3) for(const dz of ALL3){        // 斜め全20方向へ走り
+      if(((dx?1:0)+(dy?1:0)+(dz?1:0))>=2) push(rays,dx,dy,dz);
+    }
+    [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]].forEach(d=>steps.push(d));              // ＋直交1マス
+  }
+  const f = p.owner===SENTE?1:-1;   // 前方向 = 先手+z / 後手-z
+  steps = steps.map(d=>[d[0],d[1],d[2]*f]);
+  rays  = rays.map(d=>[d[0],d[1],d[2]*f]);
+  return {steps, rays, jump};
+}
+
+function legalMoves(p){
+  const {steps, rays} = moveSpec(p);
+  const set = new Set(), res = [];
+  const add = (x,y,z)=>{ const k=key(x,y,z); if(!set.has(k)){ set.add(k); res.push({x,y,z}); } };
+  for(const [dx,dy,dz] of steps){
+    const nx=p.x+dx, ny=p.y+dy, nz=p.z+dz;
+    if(!inb(nx)||!inb(ny)||!inb(nz)) continue;
+    const occ = board[nx][ny][nz];
+    if(occ && occ.owner===p.owner) continue;
+    add(nx,ny,nz);
+  }
+  for(const [dx,dy,dz] of rays){
+    let nx=p.x+dx, ny=p.y+dy, nz=p.z+dz;
+    while(inb(nx)&&inb(ny)&&inb(nz)){
+      const occ = board[nx][ny][nz];
+      if(occ){ if(occ.owner!==p.owner) add(nx,ny,nz); break; }
+      add(nx,ny,nz); nx+=dx; ny+=dy; nz+=dz;
+    }
+  }
+  return res;
+}
+
+// ===================== 成り =====================
+function inZone(owner,z){ return owner===SENTE ? z>=6 : z<=2; }  // 敵陣3層
+function mustPromote(p){
+  const o=p.owner;
+  if(p.type==='P'||p.type==='L') return o===SENTE ? p.z===8 : p.z===0;
+  if(p.type==='N') return o===SENTE ? p.z>=7 : p.z<=1;
+  return false;
+}
+function canPromote(p, fromZ){
+  return PROMOTABLE[p.type] && !p.promoted && (inZone(p.owner,p.z) || inZone(p.owner,fromZ));
+}
+
+// ===================== 選択・移動 =====================
+function selectPiece(p){
+  selected = p; legalTargets = legalMoves(p); mode='move';
+  buildTargetMarkers(); updateSelMesh(); updateLayerDimming(); updateHUD();
+}
+function deselect(){
+  selected=null; legalTargets=[]; mode='select';
+  buildTargetMarkers(); updateSelMesh(); updateLayerDimming(); updateHUD();
+}
+
+function movePieceOnBoard(p, t){
+  const cap = board[t.x][t.y][t.z];
+  board[p.x][p.y][p.z] = null;
+  if(cap){ const cpos = cap.mesh.position.clone(); removePiece(cap); spawnCaptureEffect(cpos, cap); }
+  p.x=t.x; p.y=t.y; p.z=t.z; board[t.x][t.y][t.z]=p;
+  p.mesh.position.set(w(t.x), w(t.y)+PIECE_Y, w(t.z));
+  return cap;
+}
+function sendMoveIfOnline(from, to, promote){
+  if(onlineMode && sendMove) sendMove({from, to, promote});
+}
+
+function executeMove(t){
+  const p = selected;
+  const fromPos = {x:p.x, y:p.y, z:p.z};
+  const fromZ = p.z;
+  const cap = movePieceOnBoard(p, t);
+
+  if(cap && cap.type==='K'){ deselect(); endGame(p.owner); sendMoveIfOnline(fromPos, t, false); return; }
+
+  // 成り判定
+  if(canPromote(p, fromZ)){
+    if(mustPromote(p)){ p.promoted=true; refreshMesh(p); finishTurn(); sendMoveIfOnline(fromPos, t, true); }
+    else { pendingPromo=p; pendingMoveFrom=fromPos; pendingMoveTo=t; deselect(); showPromo(true); }
+    return;
+  }
+  finishTurn();
+  sendMoveIfOnline(fromPos, t, false);
+}
+
+// 対戦相手から届いた手を、成り確認プロンプトなしでそのまま適用する
+function applyRemoteMove(msg){
+  const {from, to, promote} = msg;
+  const p = board[from.x][from.y][from.z];
+  if(!p) return;
+  const cap = movePieceOnBoard(p, to);
+  if(cap && cap.type==='K'){ deselect(); endGame(p.owner); return; }
+  if(promote){ p.promoted=true; refreshMesh(p); }
+  finishTurn();
+}
+function removePiece(p){
+  scene.remove(p.mesh);
+  const i=pieces.indexOf(p); if(i>=0) pieces.splice(i,1);
+  board[p.x][p.y][p.z]=null;
+}
+function finishTurn(){
+  deselect();
+  turn = 1-turn;
+  updateHUD();
+}
+
+// ===================== 成りプロンプト =====================
+function showPromo(on){ document.getElementById('promo').style.display = on?'flex':'none'; }
+function resolvePromo(yes){
+  if(!pendingPromo) return;
+  if(yes){ pendingPromo.promoted=true; refreshMesh(pendingPromo); }
+  const fromPos = pendingMoveFrom, toPos = pendingMoveTo;
+  pendingPromo=null; pendingMoveFrom=null; pendingMoveTo=null;
+  showPromo(false); finishTurn();
+  sendMoveIfOnline(fromPos, toPos, yes);
+}
+
+// ===================== 勝敗 =====================
+function endGame(winner){
+  gameOver=true;
+  document.getElementById('winMsg').textContent = (winner===SENTE?'先手':'後手')+'の勝ち！';
+  document.getElementById('win').style.display='flex';
+}
+
+// ===================== ハイライト用メッシュ =====================
+function wireBox(color, size){
+  const g = new THREE.BoxGeometry(size,size,size);
+  const e = new THREE.EdgesGeometry(g);
+  return new THREE.LineSegments(e, new THREE.LineBasicMaterial({color}));
+}
+const cursorMesh = wireBox(0x0a7fd0, 1.5); cursorMesh.material.linewidth=2; scene.add(cursorMesh);
+const selMesh = wireBox(0xe07a00, 1.55); selMesh.visible=false; scene.add(selMesh);
+// カーソル位置に駒があるときの黄色い発光
+const glowMesh = new THREE.Mesh(new THREE.BoxGeometry(1.5,1.5,1.5),
+  new THREE.MeshBasicMaterial({color:0xffe23a, transparent:true, opacity:0.0,
+    blending:THREE.AdditiveBlending, depthWrite:false}));
+glowMesh.visible=false; scene.add(glowMesh);
+// 同じ高さ(Y層)を薄く着色して現在の高さを示す
+const heightPlane = new THREE.Mesh(
+  new THREE.PlaneGeometry(N*S, N*S),
+  new THREE.MeshBasicMaterial({color:0xff8a1e, transparent:true, opacity:0.24,
+    side:THREE.DoubleSide, depthWrite:false}));
+heightPlane.rotation.x = -Math.PI/2; scene.add(heightPlane);
+
+let targetMeshes = [];
+function buildTargetMarkers(){
+  targetMeshes.forEach(m=>scene.remove(m)); targetMeshes = [];
+  for(const t of legalTargets){
+    const occ = board[t.x][t.y][t.z];
+    const col = occ ? 0xd83020 : 0x1f9e3d;             // 取れるマスは赤
+    const m = new THREE.Mesh(new THREE.BoxGeometry(1.35,1.35,1.35),
+      new THREE.MeshBasicMaterial({color:col, transparent:true, opacity:occ?0.4:0.32}));
+    m.position.set(w(t.x), w(t.y), w(t.z));
+    m.userData.target = t; scene.add(m); targetMeshes.push(m);
+  }
+}
+function updateCursorMesh(){
+  cursorMesh.position.set(w(cursor.x), w(cursor.y), w(cursor.z));
+  heightPlane.position.y = w(cursor.y);   // 現在の高さ層を薄く着色
+  const occ = board && board[cursor.x][cursor.y][cursor.z];
+  glowMesh.visible = !!occ;
+  if(occ) glowMesh.position.copy(cursorMesh.position);
+}
+function updateSelMesh(){
+  if(selected){ selMesh.visible=true; selMesh.position.set(w(selected.x),w(selected.y),w(selected.z)); }
+  else selMesh.visible=false;
+}
+
+// 選択中の駒がある高さ(Y)の上下1マス＝計3層だけはっきり表示し、それ以外は薄く透過させる
+const LAYER_FADE_OPACITY = 0.35;
+function updateLayerDimming(){
+  const yc = selected ? selected.y : null;
+  for(const p of pieces){
+    const dim = yc!==null && Math.abs(p.y - yc) > 1;
+    const op = dim ? LAYER_FADE_OPACITY : 1;
+    for(const m of p.mesh.material) m.opacity = op;
+  }
+}
+
+// ===================== 撃破エフェクト（爆発・吹き飛び） =====================
+const effects = [];
+const BOOM_WORDS = ['メメタア','ズキュウン','ドキューン','ドロドアオーッ','ドリュウウーン','ズズオウウン','バァァァン'];
+// 漫画の描き文字：白抜き＋極太黒縁（モノクロ）
+function makeTextSprite(text, big){
+  const c=document.createElement('canvas'); c.width=768; c.height=384;
+  const g=c.getContext('2d');
+  // 角ばった極太角ゴシックを優先
+  const FONT = "px 'HGSoeiKakugothicUB','HG創英角ゴシックUB','HGゴシックE','MS Gothic','MSゴシック','Yu Gothic',sans-serif";
+  let fs = big?158:136;
+  const maxW = 768*0.78;                   // 縁取り・傾きぶんの余白を残す
+  g.font = "900 "+fs+FONT;
+  const tw = g.measureText(text).width;
+  if(tw > maxW){ fs = Math.floor(fs*maxW/tw); g.font = "900 "+fs+FONT; }  // 長い語は縮小して収める
+  g.textAlign='center'; g.textBaseline='middle';
+  g.translate(384,196);
+  g.transform(1,0,-0.26,1,0,0);            // 斜体風の傾き
+  g.lineJoin='miter'; g.miterLimit=3;      // 角を尖らせる
+  g.strokeStyle='#000'; g.lineWidth=fs*0.20; g.strokeText(text,0,0);   // 黒縁（細め）
+  g.fillStyle='#fff'; g.fillText(text,0,0);                            // 白抜き
+  const t=new THREE.CanvasTexture(c);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:t, transparent:true, depthTest:false}));
+  sp.renderOrder=1000; sp.material.rotation=(Math.random()-0.5)*0.4;
+  return sp;
+}
+function spawnCaptureEffect(pos, cap){
+  const palette = [0xe8d0a0, 0xd8b878, 0xc19a5a, 0x9c7238, 0x6e4b23];   // 木のかけら（木目ブラウン系のみ）
+  const parts = [], group = new THREE.Group();
+  const king = cap.type==='K';
+  const n = king ? 120 : 54;                // さらに派手に爆散
+  const power = king ? 3.0 : 2.0;
+  for(let i=0;i<n;i++){
+    const shard = Math.random()<0.5;
+    const geo = shard
+      ? new THREE.BoxGeometry(0.07, 0.07, 0.3+Math.random()*0.5)    // 細長い破片
+      : new THREE.BoxGeometry(0.12+Math.random()*0.22, 0.12+Math.random()*0.22, 0.12+Math.random()*0.22);
+    const m = new THREE.Mesh(geo,
+      new THREE.MeshBasicMaterial({color: palette[(Math.random()*palette.length)|0], transparent:true}));
+    m.position.copy(pos);
+    const dir = new THREE.Vector3(Math.random()-0.5, Math.random()*0.55+0.05, Math.random()-0.5).normalize();
+    parts.push({mesh:m,
+      vel: dir.multiplyScalar((5+Math.random()*9)*power),
+      av: new THREE.Vector3((Math.random()-0.5)*26,(Math.random()-0.5)*26,(Math.random()-0.5)*26)});
+    group.add(m);
+  }
+  scene.add(group);
+  // 描き文字：駒からポップして出てくる
+  const word = king ? 'ザ・ワールド！' : BOOM_WORDS[(Math.random()*BOOM_WORDS.length)|0];
+  const txt = makeTextSprite(word, king);
+  txt.position.copy(pos); txt.position.y += 0.4; scene.add(txt);
+  const toCam = new THREE.Vector3().subVectors(camera.position, pos).normalize();
+  const txtVel = toCam.multiplyScalar(1.6).add(new THREE.Vector3(0, 0.8, 0)); // 駒からゆっくりせり出す
+  effects.push({group, parts, txt, txtVel, life:0, dur: king?1.7:1.0, pdur: king?2.0:1.25});
+}
+function updateEffects(dt){
+  for(let i=effects.length-1;i>=0;i--){
+    const e=effects[i]; e.life+=dt;
+    const pt = Math.min(1, e.life/e.pdur);       // 破片の寿命
+    for(const p of e.parts){
+      p.vel.y -= 16*dt;
+      p.mesh.position.addScaledVector(p.vel, dt);
+      p.mesh.rotation.x+=p.av.x*dt; p.mesh.rotation.y+=p.av.y*dt; p.mesh.rotation.z+=p.av.z*dt;
+      p.mesh.material.opacity = Math.max(0, 1-pt*pt);
+      p.mesh.scale.setScalar(Math.max(0.02, 1-pt*0.5));
+    }
+    if(e.txt){
+      const tt = Math.min(1, e.life/e.dur);
+      // 駒からポップ（少しオーバーシュートして収まる）
+      let s;
+      if(tt<0.18) s = tt/0.18;
+      else if(tt<0.34) s = 1 + 0.16*(1-(tt-0.18)/0.16);
+      else s = 1;
+      const base = e.dur>1.2 ? 7.5 : 5.6;
+      e.txt.scale.set(base*s, base*0.5*s, 1);
+      e.txt.position.addScaledVector(e.txtVel, dt);   // 駒からせり出す
+      e.txt.material.opacity = tt<0.5 ? 1 : Math.max(0, 1-(tt-0.5)/0.5);
+      if(tt>=1){ scene.remove(e.txt); e.txt.material.map.dispose(); e.txt.material.dispose(); e.txt=null; }
+    }
+    if(e.life>=e.pdur){
+      scene.remove(e.group);
+      e.parts.forEach(p=>{p.mesh.geometry.dispose(); p.mesh.material.dispose();});
+      if(e.txt){ scene.remove(e.txt); e.txt.material.map.dispose(); e.txt.material.dispose(); }
+      effects.splice(i,1);
+    }
+  }
+}
+
+// ===================== HUD =====================
+function pieceLabel(p){
+  const name = kanjiOf(p);
+  return (p.owner===SENTE?'先手 ':'後手 ')+name;
+}
+function updateHUD(){
+  document.getElementById('turnLabel').textContent = turn===SENTE?'先手番':'後手番';
+  const turnHint = document.getElementById('turnHint');
+  if(onlineMode){
+    turnHint.textContent = (turn===myColor) ? 'あなたの番です' : '相手の番を待っています…';
+  } else {
+    turnHint.textContent = '手番の駒を選んでください';
+  }
+  document.getElementById('curPos').textContent =
+    '['+(cursor.x+1)+','+(cursor.y+1)+','+(cursor.z+1)+']';
+  const occ = board[cursor.x][cursor.y][cursor.z];
+  document.getElementById('curCell').textContent = occ ? pieceLabel(occ) : '空き';
+  const selLine = document.getElementById('selLine');
+  if(selected){ selLine.style.display='block';
+    document.getElementById('selInfo').textContent = pieceLabel(selected)+'（移動先を選択）'; }
+  else selLine.style.display='none';
+}
+
+// ===================== オンライン対戦：モード選択・マッチング =====================
+// Trystero(既定のNostr方式シグナリング)でサーバー無しに2人をWebRTC接続する。
+// 選択マス(オレンジ)のハイライトは意図的に同期しない＝相手の選択操作はこちらの画面に一切反映しない。
+let trysteroMod = null;
+function ensureTrystero(){
+  if(!trysteroMod) trysteroMod = import('https://esm.run/trystero');
+  return trysteroMod;
+}
+function randomRoomCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s=''; for(let i=0;i<5;i++) s+=chars[(Math.random()*chars.length)|0];
+  return s;
+}
+document.getElementById('roomCodeInput').value = randomRoomCode();
+
+document.getElementById('btnLocal').onclick = ()=>{
+  document.getElementById('modeSelect').style.display='none';
+  started = true;
+};
+document.getElementById('btnOnline').onclick = ()=>{
+  document.getElementById('modeSelect').style.display='none';
+  document.getElementById('onlineSetup').style.display='flex';
+};
+document.getElementById('btnStartOnline').onclick = ()=>{
+  const code = document.getElementById('roomCodeInput').value.trim().toUpperCase();
+  if(!code) return;
+  document.getElementById('btnStartOnline').disabled = true;
+  document.getElementById('roomCodeInput').disabled = true;
+  document.getElementById('onlineStatus').textContent = '対戦相手を待っています…';
+  startOnlineMatch(code);
+};
+
+async function startOnlineMatch(code){
+  let T;
+  try{ T = await ensureTrystero(); }
+  catch(e){
+    document.getElementById('onlineStatus').textContent =
+      'オンライン対戦ライブラリの読み込みに失敗しました。インターネット接続を確認してください。';
+    return;
+  }
+  const { joinRoom, selfId } = T;
+  const room = joinRoom({appId:'sanjigen-shogi-3d-v1'}, code);
+  const move = room.makeAction('move');
+  sendMove = data => move.send(data);
+  move.onMessage = (data, meta)=>{
+    if(started && meta.peerId===opponentId) applyRemoteMove(data);
+  };
+  room.onPeerJoin = id=>{
+    if(opponentId) return; // 3人目以降が同じコードで来ても無視する
+    opponentId = id;
+    myColor = (selfId < id) ? SENTE : GOTE;
+    onlineMode = true;
+    document.getElementById('onlineSetup').style.display='none';
+    revealColorAndStart();
+  };
+  room.onPeerLeave = id=>{
+    if(id===opponentId) document.getElementById('onlineStatus').textContent = '対戦相手が切断しました。';
+  };
+}
+
+function revealColorAndStart(){
+  const el = document.getElementById('colorReveal');
+  document.getElementById('colorRevealMsg').textContent =
+    'あなたは ' + (myColor===SENTE ? '先手（青）' : '後手（赤）') + ' です';
+  el.style.display='flex';
+  setTimeout(()=>{ el.style.display='none'; started=true; updateHUD(); }, 1800);
+}
+
+// ===================== 入力 =====================
+function tryConfirm(){
+  if(gameOver||pendingPromo) return;
+  if(onlineMode && turn!==myColor) return;
+  const occ = board[cursor.x][cursor.y][cursor.z];
+  if(mode==='select'){
+    if(occ && occ.owner===turn) selectPiece(occ);
+  } else { // move
+    if(occ && occ.owner===turn){ selectPiece(occ); return; }       // 別の自駒へ持ち替え
+    const t = legalTargets.find(t=>t.x===cursor.x&&t.y===cursor.y&&t.z===cursor.z);
+    if(t) executeMove(t);
+  }
+}
+
+addEventListener('keydown', e=>{
+  if(!started) return;
+  if(pendingPromo){
+    if(e.key==='y'||e.key==='Y') resolvePromo(true);
+    else if(e.key==='n'||e.key==='N') resolvePromo(false);
+    return;
+  }
+  if(e.key==='r'||e.key==='R'){ if(!onlineMode) initGame(); return; }
+  if(gameOver) return;
+  let handled = true;
+  switch(e.key){
+    case 'ArrowLeft':  cursor.x=Math.max(0,cursor.x-1); break;
+    case 'ArrowRight': cursor.x=Math.min(N-1,cursor.x+1); break;
+    case 'ArrowDown':  cursor.y=Math.max(0,cursor.y-1); break;
+    case 'ArrowUp':    cursor.y=Math.min(N-1,cursor.y+1); break;
+    case 'PageUp':     cursor.z=Math.min(N-1,cursor.z+1); break;
+    case 'PageDown':   cursor.z=Math.max(0,cursor.z-1); break;
+    case 'Enter': case ' ': tryConfirm(); break;
+    case 'Escape': deselect(); break;
+    default: handled=false;
+  }
+  if(handled){ e.preventDefault(); updateCursorMesh(); updateHUD(); }
+}, {passive:false});
+
+// ===================== マウス選択 =====================
+const raycaster = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+let down = null;
+renderer.domElement.addEventListener('pointerdown', e=>{ down={x:e.clientX,y:e.clientY,t:Date.now()}; });
+renderer.domElement.addEventListener('pointerup', e=>{
+  if(!down) return;
+  const moved = Math.hypot(e.clientX-down.x, e.clientY-down.y);
+  const quick = Date.now()-down.t < 400;
+  down=null;
+  if(moved>6 || !quick) return;                       // ドラッグは回転として扱う
+  if(!started || gameOver || pendingPromo) return;
+  if(onlineMode && turn!==myColor) return;
+  ndc.x = (e.clientX/innerWidth)*2-1;
+  ndc.y = -(e.clientY/innerHeight)*2+1;
+  raycaster.setFromCamera(ndc, camera);
+  const objs = targetMeshes.concat(pieces.map(p=>p.mesh));
+  const hits = raycaster.intersectObjects(objs, false);
+  if(!hits.length) return;
+  const o = hits[0].object;
+  if(o.userData.target){
+    const t=o.userData.target; cursor.x=t.x;cursor.y=t.y;cursor.z=t.z; updateCursorMesh();
+    if(mode==='move') executeMove(t);
+  } else if(o.userData.piece){
+    const p=o.userData.piece; cursor.x=p.x;cursor.y=p.y;cursor.z=p.z; updateCursorMesh();
+    if(p.owner===turn) selectPiece(p);
+  }
+  updateHUD();
+});
+
+// ===================== ループ =====================
+let lastT = performance.now();
+function animate(){
+  requestAnimationFrame(animate);
+  const now = performance.now(); const dt = Math.min(0.05, (now-lastT)/1000); lastT = now;
+  controls.update();
+  cursorMesh.material.opacity = 0.5 + 0.5*Math.abs(Math.sin(Date.now()*0.004));
+  cursorMesh.material.transparent = true;
+  if(glowMesh.visible) glowMesh.material.opacity = 0.32 + 0.28*Math.abs(Math.sin(Date.now()*0.005));
+  updateEffects(dt);
+  renderer.render(scene, camera);
+}
+
+initGame();
+animate();
+}
+</script>
+</body>
+</html>
