@@ -33,12 +33,32 @@ knowledgeBaseSystemベースディレクトリの管理下プロジェクト一�
 
 ## 次セッションで最初にやること
 
-`公開準備タスクリスト.md` のフェーズA（意思決定）から着手する。特に以下が未決着：
+**この本体worktree（`claude/pre-launch-tasklist`ブランチ）では**、`公開準備タスクリスト.md` のフェーズA（意思決定）から着手する。特に以下が未決着：
 
 1. A-1: IPリスク対応方針（`index.html:648`「ザ・ワールド！」、`index.html:603` のBOOM_WORDS）を差し替えるか/許容するか決める
 2. A-2: 収益化手段の優先順位確定（`収益化手段比較.md`の所感どおり 1(AdSense)+3(投げ銭)+5(itch.io) の組み合わせで進めるかを正式決定）
 3. A-3: ホスティング先の選定（GitHub Pages / Cloudflare Pages 等を比較検討）
 4. A-4: ドメイン方針の決定（無料サブドメイン or 独自ドメイン）
+
+これらが決まり次第、フェーズC（デプロイ）・フェーズD（収益化導線）に進める。
+
+**未マージのPRが5つ滞留中**（下記「並行作業ブランチ」参照）。以下も次セッション序盤にやること：
+
+- `claude/pre-launch-tasklist`（本体worktree）のPR作成・マージ判断
+- 4つの並行作業ブランチの進捗確認（別セッションで作業した場合はその結果をレビュー）
+
+## 並行作業ブランチ（worktree、2026-07-26作成）
+
+`C:\Users\masas\worktrees\` 配下に、フェーズAの意思決定に依存しない範囲のタスクをworktreeとして切り出し済み。いずれも`claude/pre-launch-tasklist`ブランチを土台にしており、まだPRは作成していない（push済みでcompare URLのみ出ている状態）。各worktreeのCLAUDE.mdにスコープが書いてある。
+
+| worktreeパス | ブランチ | 担当タスク | 状態 |
+|---|---|---|---|
+| `C:\Users\masas\worktrees\3Dsyougi-multiplayer-matchmaking` | `claude/multiplayer-matchmaking` | B-3 対局コード仕様見直し(衝突/荒らし/切断対応) | スコープ追記のみpush済み、実装未着手 |
+| `C:\Users\masas\worktrees\3Dsyougi-tech-polish` | `claude/tech-polish` | B-4 CDN依存見直し + B-5 フォント依存対応(任意) | 同上 |
+| `C:\Users\masas\worktrees\3Dsyougi-privacy-policy-draft` | `claude/privacy-policy-draft` | B-1 プライバシーポリシー下書き(AdSense文言は仮置き) | 同上 |
+| `C:\Users\masas\worktrees\3Dsyougi-tip-jar` | `claude/tip-jar` | D-3 投げ銭ボタン組み込み(URLはプレースホルダ) | 同上 |
+
+**注意**: いずれの並行ブランチもA-1〜A-4の意思決定には依存しないスコープに限定している。各ブランチで作業する際は、そのworktree直下の`CLAUDE.md`冒頭の「⚠️ このブランチのスコープ」を読むこと。オンライン対戦のテストが必要な場合、`_cert/`は`.gitignore`対象のため各worktreeには存在せず、本体からコピーするか作り直す必要がある（`multiplayer-matchmaking`のCLAUDE.mdに記載済み）。
 
 ## 技術スタック
 
