@@ -13,7 +13,7 @@ knowledgeBaseSystemベースディレクトリの管理下プロジェクト一�
 
 ## 次セッションで最初にやること
 
-**この本体worktree（`claude/pre-launch-tasklist`ブランチ）では**、`公開準備タスクリスト.md` のフェーズA（意思決定）から着手する。特に以下が未決着：
+**本体worktree（`main`ブランチ、`公開準備タスクリスト.md`・`.gitattributes`とも反映済み）では**、`公開準備タスクリスト.md` のフェーズA（意思決定）から着手する。特に以下が未決着：
 
 1. A-1: IPリスク対応方針（`index.html:648`「ザ・ワールド！」、`index.html:603` のBOOM_WORDS）を差し替えるか/許容するか決める
 2. A-2: 収益化手段の優先順位確定（`収益化手段比較.md`の所感どおり 1(AdSense)+3(投げ銭)+5(itch.io) の組み合わせで進めるかを正式決定）
@@ -22,23 +22,20 @@ knowledgeBaseSystemベースディレクトリの管理下プロジェクト一�
 
 これらが決まり次第、フェーズC（デプロイ）・フェーズD（収益化導線）に進める。
 
-**未マージのPRが5つ滞留中**（下記「並行作業ブランチ」参照）。以下も次セッション序盤にやること：
-
-- `claude/pre-launch-tasklist`（本体worktree）のPR作成・マージ判断
-- 4つの並行作業ブランチの進捗確認（別セッションで作業した場合はその結果をレビュー）
+**並行作業ブランチのindex.html競合リスクに備える**（下記「並行作業ブランチ」参照）: `multiplayer-matchmaking`・`tech-polish`・`tip-jar`の3ブランチが同じ`index.html`を編集する見込み。全部を並行フルスピードで進めて最後にまとめてマージすると衝突が大きくなりやすいため、**完了したブランチから順次PR→マージし、残りのブランチは都度 `git fetch origin && git merge origin/main` で追従する**運用にする（グローバルCLAUDE.mdルール16）。次セッションでは、どのブランチから着手するか順番を決めるか、着手したブランチが完了し次第すぐmainへマージする。
 
 ## 並行作業ブランチ（worktree、2026-07-26作成）
 
-`C:\Users\masas\worktrees\` 配下に、フェーズAの意思決定に依存しない範囲のタスクをworktreeとして切り出し済み。いずれも`claude/pre-launch-tasklist`ブランチを土台にしており、まだPRは作成していない（push済みでcompare URLのみ出ている状態）。各worktreeのCLAUDE.mdにスコープが書いてある。
+`C:\Users\masas\worktrees\` 配下に、フェーズAの意思決定に依存しない範囲のタスクをworktreeとして切り出し済み。4ブランチとも最新の`main`（`公開準備タスクリスト.md`・`.gitattributes`込み）を取り込み済み（2026-07-26時点）。各worktreeのCLAUDE.mdにスコープが書いてある。まだ実装は未着手、PRも未作成。
 
-| worktreeパス | ブランチ | 担当タスク | 状態 |
+| worktreeパス | ブランチ | 担当タスク | index.htmlを触るか |
 |---|---|---|---|
-| `C:\Users\masas\worktrees\3Dsyougi-multiplayer-matchmaking` | `claude/multiplayer-matchmaking` | B-3 対局コード仕様見直し(衝突/荒らし/切断対応) | スコープ追記のみpush済み、実装未着手 |
-| `C:\Users\masas\worktrees\3Dsyougi-tech-polish` | `claude/tech-polish` | B-4 CDN依存見直し + B-5 フォント依存対応(任意) | 同上 |
-| `C:\Users\masas\worktrees\3Dsyougi-privacy-policy-draft` | `claude/privacy-policy-draft` | B-1 プライバシーポリシー下書き(AdSense文言は仮置き) | 同上 |
-| `C:\Users\masas\worktrees\3Dsyougi-tip-jar` | `claude/tip-jar` | D-3 投げ銭ボタン組み込み(URLはプレースホルダ) | 同上 |
+| `C:\Users\masas\worktrees\3Dsyougi-multiplayer-matchmaking` | `claude/multiplayer-matchmaking` | B-3 対局コード仕様見直し(衝突/荒らし/切断対応) | 触る |
+| `C:\Users\masas\worktrees\3Dsyougi-tech-polish` | `claude/tech-polish` | B-4 CDN依存見直し + B-5 フォント依存対応(任意) | 触る |
+| `C:\Users\masas\worktrees\3Dsyougi-privacy-policy-draft` | `claude/privacy-policy-draft` | B-1 プライバシーポリシー下書き(AdSense文言は仮置き) | 触らない(新規`privacy.html`のみ) |
+| `C:\Users\masas\worktrees\3Dsyougi-tip-jar` | `claude/tip-jar` | D-3 投げ銭ボタン組み込み(URLはプレースホルダ) | 触る |
 
-**注意**: いずれの並行ブランチもA-1〜A-4の意思決定には依存しないスコープに限定している。各ブランチで作業する際は、そのworktree直下の`CLAUDE.md`冒頭の「⚠️ このブランチのスコープ」を読むこと。オンライン対戦のテストが必要な場合、`_cert/`は`.gitignore`対象のため各worktreeには存在せず、本体からコピーするか作り直す必要がある（`multiplayer-matchmaking`のCLAUDE.mdに記載済み）。
+**注意**: いずれの並行ブランチもA-1〜A-4の意思決定には依存しないスコープに限定している。各ブランチで作業する際は、そのworktree直下の`CLAUDE.md`冒頭の「⚠️ このブランチのスコープ」を読むこと。オンライン対戦のテストが必要な場合、`_cert/`は`.gitignore`対象のため各worktreeには存在せず、本体からコピーするか作り直す必要がある（`multiplayer-matchmaking`のCLAUDE.mdに記載済み）。`privacy-policy-draft`はindex.htmlを触らないため他3ブランチとの競合リスクがなく、いつマージしても安全。
 
 ## 技術スタック
 
