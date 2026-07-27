@@ -1,6 +1,6 @@
-# 3Dsyougi — CLAUDE.md（ブランチ: claude/tip-jar）
+# 3Dsyougi — CLAUDE.md
 
-## ⚠️ このブランチのスコープ（最優先で読む）
+## このブランチ（claude/tip-jar）のスコープ（最優先で読む）
 
 `公開準備タスクリスト.md` の **D-3: 投げ銭ボタンの設置** を担当するworktree。
 
@@ -19,7 +19,7 @@
 
 ---
 
-## プロジェクト概要（プロジェクト全体の背景。以下は本体と共通）
+## プロジェクト概要
 
 立体将棋（9×9×9）— 単一HTML(`index.html`)のThree.jsゲーム。ふざけ要素ありの個人開発。
 knowledgeBaseSystemベースディレクトリの管理下プロジェクト一覧（ルートCLAUDE.md）には未記載の新規プロジェクト。
