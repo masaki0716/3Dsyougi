@@ -600,7 +600,7 @@ function updateLayerDimming(){
 
 // ===================== 撃破エフェクト（爆発・吹き飛び） =====================
 const effects = [];
-const BOOM_WORDS = ['メメタア','ズキュウン','ドキューン','ドロドアオーッ','ドリュウウーン','ズズオウウン','バァァァン'];
+const BOOM_WORDS = ['ズキュウン','ドキューン','ドロドアオーッ','ドリュウウーン','ズズオウウン','バァァァン'];
 // 漫画の描き文字：白抜き＋極太黒縁（モノクロ）
 function makeTextSprite(text, big){
   const c=document.createElement('canvas'); c.width=768; c.height=384;
@@ -645,7 +645,7 @@ function spawnCaptureEffect(pos, cap){
   }
   scene.add(group);
   // 描き文字：駒からポップして出てくる
-  const word = king ? 'ザ・ワールド！' : BOOM_WORDS[(Math.random()*BOOM_WORDS.length)|0];
+  const word = king ? '勝利！！' : BOOM_WORDS[(Math.random()*BOOM_WORDS.length)|0];
   const txt = makeTextSprite(word, king);
   txt.position.copy(pos); txt.position.y += 0.4; scene.add(txt);
   const toCam = new THREE.Vector3().subVectors(camera.position, pos).normalize();
