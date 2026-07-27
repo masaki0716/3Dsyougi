@@ -33,32 +33,35 @@ knowledgeBaseSystemベースディレクトリの管理下プロジェクト一�
 
 ## 次セッションで最初にやること
 
-**フェーズA（意思決定）は2026-07-27に完了**（詳細は`公開準備タスクリスト.md`参照）：
+**フェーズA（意思決定）・A-1実装・B-1（プライバシーポリシー下書き）は2026-07-27にすべて完了しmainにマージ済み**：
 
-1. A-1: 「ザ・ワールド！」（`index.html:648`）・BOOM_WORDSの「メメタア」（`index.html:603`）→ **オリジナル文言に差し替える**と決定。実際の差し替え文言はまだ未確定（次アクション）
+1. A-1: 「ザ・ワールド！」→**「勝利！！」**、BOOM_WORDSの「メメタア」→**削除**（`claude/ip-risk-wording`、PRマージ済み）
 2. A-2: 収益化手段は **1(AdSense)+3(投げ銭)+5(itch.io)** の組み合わせで正式決定
 3. A-3: ホスティング先は **GitHub Pages** に決定
 4. A-4: ドメインは **無料サブドメイン（masaki0716.github.io/3Dsyougi）で開始**
+5. B-1: `privacy.html`（日英併記の下書き）を追加（`claude/privacy-policy-draft`、PRマージ済み）
 
 次セッションでは以下のいずれかから着手：
-- A-1の実装: 「ザ・ワールド！」「メメタア」の差し替え文言を決めてindex.htmlに反映（フェーズBの一部として着手可）
-- 並行worktreeブランチ（下記4本）のいずれかで実装を進める
+- 残り3並行worktreeブランチ（multiplayer-matchmaking / tech-polish / tip-jar）のいずれかで実装を進める
 - フェーズC（GitHub Pagesへのデプロイ設定）に着手
+- B-2（Cookie同意/CMP）の検討
 
-**並行作業ブランチのindex.html競合リスクに備える**（下記「並行作業ブランチ」参照）: `multiplayer-matchmaking`・`tech-polish`・`tip-jar`の3ブランチが同じ`index.html`を編集する見込み。全部を並行フルスピードで進めて最後にまとめてマージすると衝突が大きくなりやすいため、**完了したブランチから順次PR→マージし、残りのブランチは都度 `git fetch origin && git merge origin/main` で追従する**運用にする（グローバルCLAUDE.mdルール16）。次セッションでは、どのブランチから着手するか順番を決めるか、着手したブランチが完了し次第すぐmainへマージする。
+**並行作業ブランチのindex.html競合リスクに備える**（下記「並行作業ブランチ」参照）: `multiplayer-matchmaking`・`tech-polish`・`tip-jar`の3ブランチが同じ`index.html`を編集する見込み。全部を並行フルスピードで進めて最後にまとめてマージすると衝突が大きくなりやすいため、**完了したブランチから順次PR→マージし、残りのブランチは都度 `git fetch origin && git merge origin/main` で追従する**運用にする（グローバルCLAUDE.mdルール16）。この3ブランチは2026-07-27時点でmain（フェーズA決定・A-1実装・B-1完了込み）に追従済みだが、次にどれかのPRをマージしたら、残りは再度 `git fetch origin && git merge origin/main` で追従すること。
+
+**⚠️ worktreeブランチのCLAUDE.mdはheader/タイトル行を書き換えない**: 2026-07-27、`claude/privacy-policy-draft`のCLAUDE.md冒頭に付けていた「⚠️ このブランチのスコープ」見出し（ファイル先頭の`# 3Dsyougi — CLAUDE.md（ブランチ: ...）`という独自タイトル）が、PRマージ時にmain側の本来のタイトル・概要セクションを上書きしてしまい、mainマージ後に気づいて手動修正する事態になった。今後worktreeでブランチ固有のスコープを書く場合、**ファイル冒頭のタイトル行・共通セクションの構成は変えず**、スコープ説明は本文中の独立した見出し（例: `## このブランチのスコープ`）として追記するに留める。
 
 ## 並行作業ブランチ（worktree、2026-07-26作成）
 
-`C:\Users\masas\worktrees\` 配下に、フェーズAの意思決定に依存しない範囲のタスクをworktreeとして切り出し済み。4ブランチとも最新の`main`（`公開準備タスクリスト.md`・`.gitattributes`込み）を取り込み済み（2026-07-26時点）。各worktreeのCLAUDE.mdにスコープが書いてある。まだ実装は未着手、PRも未作成。
+`C:\Users\masas\worktrees\` 配下に、フェーズAの意思決定に依存しない範囲のタスクをworktreeとして切り出し済み。各worktreeのCLAUDE.mdにスコープが書いてある。
 
-| worktreeパス | ブランチ | 担当タスク | index.htmlを触るか |
-|---|---|---|---|
-| `C:\Users\masas\worktrees\3Dsyougi-multiplayer-matchmaking` | `claude/multiplayer-matchmaking` | B-3 対局コード仕様見直し(衝突/荒らし/切断対応) | 触る |
-| `C:\Users\masas\worktrees\3Dsyougi-tech-polish` | `claude/tech-polish` | B-4 CDN依存見直し + B-5 フォント依存対応(任意) | 触る |
-| `C:\Users\masas\worktrees\3Dsyougi-privacy-policy-draft` | `claude/privacy-policy-draft` | B-1 プライバシーポリシー下書き(AdSense文言は仮置き) | 触らない(新規`privacy.html`のみ) |
-| `C:\Users\masas\worktrees\3Dsyougi-tip-jar` | `claude/tip-jar` | D-3 投げ銭ボタン組み込み(URLはプレースホルダ) | 触る |
+| worktreeパス | ブランチ | 担当タスク | index.htmlを触るか | 状態 |
+|---|---|---|---|---|
+| `C:\Users\masas\worktrees\3Dsyougi-multiplayer-matchmaking` | `claude/multiplayer-matchmaking` | B-3 対局コード仕様見直し(衝突/荒らし/切断対応) | 触る | 未着手・main追従済み（2026-07-27時点） |
+| `C:\Users\masas\worktrees\3Dsyougi-tech-polish` | `claude/tech-polish` | B-4 CDN依存見直し + B-5 フォント依存対応(任意) | 触る | 未着手・main追従済み（2026-07-27時点） |
+| `C:\Users\masas\worktrees\3Dsyougi-privacy-policy-draft` | `claude/privacy-policy-draft` | B-1 プライバシーポリシー下書き | 触らない(新規`privacy.html`のみ) | **完了、PRマージ済み** |
+| `C:\Users\masas\worktrees\3Dsyougi-tip-jar` | `claude/tip-jar` | D-3 投げ銭ボタン組み込み(URLはプレースホルダ) | 触る | 未着手・main追従済み（2026-07-27時点） |
 
-**注意**: いずれの並行ブランチもA-1〜A-4の意思決定には依存しないスコープに限定している。各ブランチで作業する際は、そのworktree直下の`CLAUDE.md`冒頭の「⚠️ このブランチのスコープ」を読むこと。オンライン対戦のテストが必要な場合、`_cert/`は`.gitignore`対象のため各worktreeには存在せず、本体からコピーするか作り直す必要がある（`multiplayer-matchmaking`のCLAUDE.mdに記載済み）。`privacy-policy-draft`はindex.htmlを触らないため他3ブランチとの競合リスクがなく、いつマージしても安全。
+**注意**: いずれの並行ブランチもA-1〜A-4の意思決定には依存しないスコープに限定している。各ブランチで作業する際は、そのworktree直下の`CLAUDE.md`のスコープ説明を読むこと。オンライン対戦のテストが必要な場合、`_cert/`は`.gitignore`対象のため各worktreeには存在せず、本体からコピーするか作り直す必要がある（`multiplayer-matchmaking`のCLAUDE.mdに記載済み）。
 
 ## 技術スタック
 
