@@ -1,24 +1,5 @@
 # 3Dsyougi — CLAUDE.md
 
-## このブランチ（claude/tip-jar）のスコープ（最優先で読む）
-
-`公開準備タスクリスト.md` の **D-3: 投げ銭ボタンの設置** を担当するworktree。
-
-- `収益化手段比較.md`の「3. 投げ銭・寄付型」に基づき、Buy Me a Coffee／Ko-fi等へのリンクボタンをゲームUI内に組み込む
-- **実際のアカウントURLはまだ存在しない前提**。プレースホルダURL（例: `#TODO-tip-jar-url` やコメントで明示）を使い、後からユーザーが実URLに差し替えられる形にする
-- ボタンの配置・見た目は、ゲームの既存UIトーン（ふざけ要素あり）を崩さない範囲で検討する
-- 併用可否は`収益化手段比較.md`に「他の全手段と完全併用可能」とある通り最も依存が薄い手段なので、他の意思決定を待たずに土台だけ作っておく
-
-**スコープの境界**:
-- **アカウント自体の作成（Buy Me a Coffee/Ko-fi等への登録）はユーザー側のタスク。** このブランチでは実装（UI・リンク構造）のみを担当する。
-- フェーズA（意思決定）には依存しない。IPリスク・ホスティング先・ドメインの決定を待たずに進めてよい。
-- 単一HTML(`index.html`)構成を維持する。ビルドツール導入はしない。
-- 広告(AdSense)関連の実装（D-1, D-2）はここでは行わない。
-
-**完了時**: `公開準備タスクリスト.md`のD-3に「UI実装済み・実URL未設定」のようなメモ付きでチェックを入れるPRを作成する。実URLへの差し替えはユーザーがアカウント作成後に別途行う旨を明記する。
-
----
-
 ## プロジェクト概要
 
 立体将棋（9×9×9）— 単一HTML(`index.html`)のThree.jsゲーム。ふざけ要素ありの個人開発。
@@ -36,16 +17,21 @@ knowledgeBaseSystemベースディレクトリの管理下プロジェクト一�
 - フェーズA（A-1〜A-4）の意思決定
 - A-1実装: 「ザ・ワールド！」→「勝利！！」、BOOM_WORDSの「メメタア」削除（`claude/ip-risk-wording`、PRマージ済み）
 - B-1: `privacy.html`（日英併記の下書き）追加（`claude/privacy-policy-draft`、PRマージ済み）
-- worktree運用の事故修正（下記「⚠️」参照）と4並行ブランチのmain追従
+- D-3: 投げ銭ボタン（応援するリンク）追加（`claude/tip-jar`、PRマージ済み）
+- B-3: 対局コードの満室通知・切断時専用画面・再生成ボタン追加（`claude/multiplayer-matchmaking`、push済み・PR作成待ち）
+- B-4/B-5: three.js関連のvendor自前ホスティング、フォント埋め込みは見送りと判断（`claude/tech-polish`、push済み・PR作成待ち）
+- worktree CLAUDE.mdの「ブランチスコープ節」がmainにマージされてしまう事故の再発と根本修正（下記「⚠️」参照）
 
 次セッションでは以下のいずれかから着手：
-- 残り3並行worktreeブランチ（multiplayer-matchmaking / tech-polish / tip-jar）のいずれかで実装を進める
+- 残り2並行worktreeブランチ（multiplayer-matchmaking / tech-polish）のPRを作成・マージする（下記「⚠️」の手順でスコープ節を削除してから）
 - フェーズC（GitHub Pagesへのデプロイ設定）に着手
 - B-2（Cookie同意/CMP）の検討
 
-**並行作業ブランチのindex.html競合リスクに備える**（下記「並行作業ブランチ」参照）: `multiplayer-matchmaking`・`tech-polish`・`tip-jar`の3ブランチが同じ`index.html`を編集する見込み。全部を並行フルスピードで進めて最後にまとめてマージすると衝突が大きくなりやすいため、**完了したブランチから順次PR→マージし、残りのブランチは都度 `git fetch origin && git merge origin/main` で追従する**運用にする（グローバルCLAUDE.mdルール16）。この3ブランチは2026-07-27時点でmain（フェーズA決定・A-1実装・B-1完了込み）に追従済みだが、次にどれかのPRをマージしたら、残りは再度 `git fetch origin && git merge origin/main` で追従すること。
+**並行作業ブランチのindex.html競合リスクに備える**（下記「並行作業ブランチ」参照）: `multiplayer-matchmaking`・`tech-polish`の2ブランチが同じ`index.html`を編集している。**完了したブランチから順次PR→マージし、残りのブランチは都度 `git fetch origin && git merge origin/main` で追従する**運用にする（グローバルCLAUDE.mdルール16）。
 
-**⚠️ worktreeブランチのCLAUDE.mdはheader/タイトル行を書き換えない**: 2026-07-27、`claude/privacy-policy-draft`のCLAUDE.md冒頭に付けていた「⚠️ このブランチのスコープ」見出し（ファイル先頭の`# 3Dsyougi — CLAUDE.md（ブランチ: ...）`という独自タイトル）が、PRマージ時にmain側の本来のタイトル・概要セクションを上書きしてしまい、mainマージ後に気づいて手動修正する事態になった。今後worktreeでブランチ固有のスコープを書く場合、**ファイル冒頭のタイトル行・共通セクションの構成は変えず**、スコープ説明は本文中の独立した見出し（例: `## このブランチのスコープ`）として追記するに留める。
+**⚠️ worktreeのCLAUDE.mdに「## このブランチのスコープ」節を書いたら、PR作成前に必ず削除する**: 2026-07-27、2度目の事故が発生。各worktreeのCLAUDE.mdにブランチ固有の「## このブランチ（claude/xxx）のスコープ」節を追記する運用にしていたが、この節は**通常のPRマージで無条件にmainへ混入する**。1つ目のブランチ（tip-jar）のPRをマージした結果、mainのCLAUDE.md冒頭にtip-jar固有のスコープ節がそのまま残ってしまい、その状態で2つ目のブランチ（multiplayer-matchmaking）のPRを作ろうとしたところ、mainと当該ブランチがそれぞれ異なる「## このブランチのスコープ」節を持っていたためコンフリクトになった（この時点でmainを直接編集して該当節を削除し復旧、詳細は本セッションのgit履歴参照）。
+  - 根本原因: ブランチ固有のスコープ節は「そのworktreeで作業する間だけ必要な情報」であり、mainには存在してはいけない内容なのに、通常のファイルとして共有ファイル（CLAUDE.md）に書いていたため、マージのたびにmainを汚染し、後続ブランチとの衝突を生んでいた。
+  - **今後のルール**: worktreeでブランチ固有のスコープ節を書くのは作業中は構わないが、**PRを作成する直前に、そのブランチのCLAUDE.mdからスコープ節（見出しごと）を削除するコミットを追加する**。こうすればPRの差分にスコープ節が含まれず、mainを汚染しない。あるいは、そもそもスコープ節を`CLAUDE.md`本体に書かず、worktree直下に`.gitignore`対象の別ファイル（例: `SCOPE.local.md`）として書く運用に変えることも次回検討する。
 
 ## 並行作業ブランチ（worktree、2026-07-26作成）
 
@@ -53,10 +39,10 @@ knowledgeBaseSystemベースディレクトリの管理下プロジェクト一�
 
 | worktreeパス | ブランチ | 担当タスク | index.htmlを触るか | 状態 |
 |---|---|---|---|---|
-| `C:\Users\masas\worktrees\3Dsyougi-multiplayer-matchmaking` | `claude/multiplayer-matchmaking` | B-3 対局コード仕様見直し(衝突/荒らし/切断対応) | 触る | 未着手・main追従済み（2026-07-27時点） |
-| `C:\Users\masas\worktrees\3Dsyougi-tech-polish` | `claude/tech-polish` | B-4 CDN依存見直し + B-5 フォント依存対応(任意) | 触る | 未着手・main追従済み（2026-07-27時点） |
+| `C:\Users\masas\worktrees\3Dsyougi-multiplayer-matchmaking` | `claude/multiplayer-matchmaking` | B-3 対局コード仕様見直し(衝突/荒らし/切断対応) | 触る | **完了・PR作成待ち**（2026-07-27） |
+| `C:\Users\masas\worktrees\3Dsyougi-tech-polish` | `claude/tech-polish` | B-4 CDN依存見直し + B-5 フォント依存対応(任意) | 触る | **完了・PR作成待ち**（2026-07-27） |
 | `C:\Users\masas\worktrees\3Dsyougi-privacy-policy-draft` | `claude/privacy-policy-draft` | B-1 プライバシーポリシー下書き | 触らない(新規`privacy.html`のみ) | **完了、PRマージ済み** |
-| `C:\Users\masas\worktrees\3Dsyougi-tip-jar` | `claude/tip-jar` | D-3 投げ銭ボタン組み込み(URLはプレースホルダ) | 触る | **完了・PR作成待ち**（2026-07-27） |
+| `C:\Users\masas\worktrees\3Dsyougi-tip-jar` | `claude/tip-jar` | D-3 投げ銭ボタン組み込み(URLはプレースホルダ) | 触る | **完了、PRマージ済み** |
 
 **注意**: いずれの並行ブランチもA-1〜A-4の意思決定には依存しないスコープに限定している。各ブランチで作業する際は、そのworktree直下の`CLAUDE.md`のスコープ説明を読むこと。オンライン対戦のテストが必要な場合、`_cert/`は`.gitignore`対象のため各worktreeには存在せず、本体からコピーするか作り直す必要がある（`multiplayer-matchmaking`のCLAUDE.mdに記載済み）。
 
