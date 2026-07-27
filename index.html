@@ -97,9 +97,12 @@
 <div id="onlineSetup" class="big">
   <div class="msg" style="font-size:28px">オンライン対戦</div>
   <div style="margin-top:14px;font-size:14px;letter-spacing:.1em;opacity:.8">対局コード</div>
-  <input id="roomCodeInput" maxlength="8" style="font-size:22px;letter-spacing:.25em;text-align:center;
-    width:190px;margin-top:8px;padding:8px;border:1px solid var(--gold);border-radius:6px;
-    background:#fff8ec;color:var(--ink);font-family:var(--brush)">
+  <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+    <input id="roomCodeInput" maxlength="8" style="font-size:22px;letter-spacing:.25em;text-align:center;
+      width:190px;padding:8px;border:1px solid var(--gold);border-radius:6px;
+      background:#fff8ec;color:var(--ink);font-family:var(--brush)">
+    <button id="btnRerollCode" title="コードを出し直す" style="font-size:16px;padding:8px 10px">🔄</button>
+  </div>
   <div style="margin-top:12px;font-size:14px;max-width:340px;text-align:center;line-height:1.7;opacity:.85">
     このコードを対戦相手に伝えてください。相手が同じコードで参加すると、そろい次第自動で対戦が始まります。
   </div>
@@ -109,6 +112,11 @@
 
 <div id="colorReveal" class="big">
   <div class="msg" id="colorRevealMsg" style="font-size:42px">あなたは 先手（青） です</div>
+</div>
+
+<div id="disconnected" class="big">
+  <div class="msg" style="font-size:34px">対局相手が切断しました</div>
+  <button id="btnAfterDisconnect" style="margin-top:26px">新しいコードでやり直す</button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -741,14 +749,26 @@ document.getElementById('btnOnline').onclick = ()=>{
   document.getElementById('modeSelect').style.display='none';
   document.getElementById('onlineSetup').style.display='flex';
 };
+document.getElementById('btnRerollCode').onclick = ()=>{
+  document.getElementById('roomCodeInput').value = randomRoomCode();
+};
 document.getElementById('btnStartOnline').onclick = ()=>{
   const code = document.getElementById('roomCodeInput').value.trim().toUpperCase();
   if(!code) return;
   document.getElementById('btnStartOnline').disabled = true;
   document.getElementById('roomCodeInput').disabled = true;
+  document.getElementById('btnRerollCode').disabled = true;
   document.getElementById('onlineStatus').textContent = '対戦相手を待っています…';
   startOnlineMatch(code);
 };
+document.getElementById('btnAfterDisconnect').onclick = ()=>{ location.reload(); };
+
+function resetOnlineSetupUI(msg){
+  document.getElementById('btnStartOnline').disabled = false;
+  document.getElementById('roomCodeInput').disabled = false;
+  document.getElementById('btnRerollCode').disabled = false;
+  document.getElementById('onlineStatus').textContent = msg;
+}
 
 async function startOnlineMatch(code){
   let T;
@@ -761,12 +781,17 @@ async function startOnlineMatch(code){
   const { joinRoom, selfId } = T;
   const room = joinRoom({appId:'sanjigen-shogi-3d-v1'}, code);
   const move = room.makeAction('move');
+  const full = room.makeAction('full');
   sendMove = data => move.send(data);
   move.onMessage = (data, meta)=>{
     if(started && meta.peerId===opponentId) applyRemoteMove(data);
   };
+  full.onMessage = ()=>{
+    // 既に2人揃っている対局コードに、3人目以降として参加しようとした場合の通知
+    if(!onlineMode) resetOnlineSetupUI('このコードは既に対局中です。コードを出し直すか、別のコードでお試しください。');
+  };
   room.onPeerJoin = id=>{
-    if(opponentId) return; // 3人目以降が同じコードで来ても無視する
+    if(opponentId){ full.send({}, {target:id}); return; } // 3人目以降が同じコードで来たら「満室」を通知して無視する
     opponentId = id;
     myColor = (selfId < id) ? SENTE : GOTE;
     onlineMode = true;
@@ -774,7 +799,13 @@ async function startOnlineMatch(code){
     revealColorAndStart();
   };
   room.onPeerLeave = id=>{
-    if(id===opponentId) document.getElementById('onlineStatus').textContent = '対戦相手が切断しました。';
+    if(id!==opponentId) return;
+    if(started && !gameOver){
+      started = false;
+      document.getElementById('disconnected').style.display='flex';
+    } else {
+      resetOnlineSetupUI('対戦相手が切断しました。もう一度お試しください。');
+    }
   };
 }
 
