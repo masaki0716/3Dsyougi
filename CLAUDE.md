@@ -1,5 +1,24 @@
 # 3Dsyougi — CLAUDE.md
 
+## このブランチ（claude/tip-jar）のスコープ（最優先で読む）
+
+`公開準備タスクリスト.md` の **D-3: 投げ銭ボタンの設置** を担当するworktree。
+
+- `収益化手段比較.md`の「3. 投げ銭・寄付型」に基づき、Buy Me a Coffee／Ko-fi等へのリンクボタンをゲームUI内に組み込む
+- **実際のアカウントURLはまだ存在しない前提**。プレースホルダURL（例: `#TODO-tip-jar-url` やコメントで明示）を使い、後からユーザーが実URLに差し替えられる形にする
+- ボタンの配置・見た目は、ゲームの既存UIトーン（ふざけ要素あり）を崩さない範囲で検討する
+- 併用可否は`収益化手段比較.md`に「他の全手段と完全併用可能」とある通り最も依存が薄い手段なので、他の意思決定を待たずに土台だけ作っておく
+
+**スコープの境界**:
+- **アカウント自体の作成（Buy Me a Coffee/Ko-fi等への登録）はユーザー側のタスク。** このブランチでは実装（UI・リンク構造）のみを担当する。
+- フェーズA（意思決定）には依存しない。IPリスク・ホスティング先・ドメインの決定を待たずに進めてよい。
+- 単一HTML(`index.html`)構成を維持する。ビルドツール導入はしない。
+- 広告(AdSense)関連の実装（D-1, D-2）はここでは行わない。
+
+**完了時**: `公開準備タスクリスト.md`のD-3に「UI実装済み・実URL未設定」のようなメモ付きでチェックを入れるPRを作成する。実URLへの差し替えはユーザーがアカウント作成後に別途行う旨を明記する。
+
+---
+
 ## プロジェクト概要
 
 立体将棋（9×9×9）— 単一HTML(`index.html`)のThree.jsゲーム。ふざけ要素ありの個人開発。
@@ -37,7 +56,7 @@ knowledgeBaseSystemベースディレクトリの管理下プロジェクト一�
 | `C:\Users\masas\worktrees\3Dsyougi-multiplayer-matchmaking` | `claude/multiplayer-matchmaking` | B-3 対局コード仕様見直し(衝突/荒らし/切断対応) | 触る | 未着手・main追従済み（2026-07-27時点） |
 | `C:\Users\masas\worktrees\3Dsyougi-tech-polish` | `claude/tech-polish` | B-4 CDN依存見直し + B-5 フォント依存対応(任意) | 触る | 未着手・main追従済み（2026-07-27時点） |
 | `C:\Users\masas\worktrees\3Dsyougi-privacy-policy-draft` | `claude/privacy-policy-draft` | B-1 プライバシーポリシー下書き | 触らない(新規`privacy.html`のみ) | **完了、PRマージ済み** |
-| `C:\Users\masas\worktrees\3Dsyougi-tip-jar` | `claude/tip-jar` | D-3 投げ銭ボタン組み込み(URLはプレースホルダ) | 触る | 未着手・main追従済み（2026-07-27時点） |
+| `C:\Users\masas\worktrees\3Dsyougi-tip-jar` | `claude/tip-jar` | D-3 投げ銭ボタン組み込み(URLはプレースホルダ) | 触る | **完了・PR作成待ち**（2026-07-27） |
 
 **注意**: いずれの並行ブランチもA-1〜A-4の意思決定には依存しないスコープに限定している。各ブランチで作業する際は、そのworktree直下の`CLAUDE.md`のスコープ説明を読むこと。オンライン対戦のテストが必要な場合、`_cert/`は`.gitignore`対象のため各worktreeには存在せず、本体からコピーするか作り直す必要がある（`multiplayer-matchmaking`のCLAUDE.mdに記載済み）。
 
