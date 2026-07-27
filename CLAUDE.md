@@ -36,13 +36,11 @@ knowledgeBaseSystemベースディレクトリの管理下プロジェクト一�
 
 ## 次セッションで最初にやること
 
-**フェーズA（意思決定）・A-1実装・B-1（プライバシーポリシー下書き）は2026-07-27にすべて完了しmainにマージ済み**：
-
-1. A-1: 「ザ・ワールド！」→**「勝利！！」**、BOOM_WORDSの「メメタア」→**削除**（`claude/ip-risk-wording`、PRマージ済み）
-2. A-2: 収益化手段は **1(AdSense)+3(投げ銭)+5(itch.io)** の組み合わせで正式決定
-3. A-3: ホスティング先は **GitHub Pages** に決定
-4. A-4: ドメインは **無料サブドメイン（masaki0716.github.io/3Dsyougi）で開始**
-5. B-1: `privacy.html`（日英併記の下書き）を追加（`claude/privacy-policy-draft`、PRマージ済み）
+**2026-07-27セッションで完了した内容**（詳細は`公開準備タスクリスト.md`）:
+- フェーズA（A-1〜A-4）の意思決定
+- A-1実装: 「ザ・ワールド！」→「勝利！！」、BOOM_WORDSの「メメタア」削除（`claude/ip-risk-wording`、PRマージ済み）
+- B-1: `privacy.html`（日英併記の下書き）追加（`claude/privacy-policy-draft`、PRマージ済み）
+- worktree運用の事故修正（下記「⚠️」参照）と4並行ブランチのmain追従
 
 次セッションでは以下のいずれかから着手：
 - 残り3並行worktreeブランチ（multiplayer-matchmaking / tech-polish / tip-jar）のいずれかで実装を進める
@@ -72,8 +70,8 @@ knowledgeBaseSystemベースディレクトリの管理下プロジェクト一�
 |---|---|
 | 3D描画 | Three.js r128（CDN: cdnjs / jsdelivr） |
 | オンライン対戦 | Trystero（P2P、既定Nostrシグナリング、`esm.run`から動的import） |
-| ホスティング | 未定（GitHub Pages / Cloudflare Pages 等を比較検討中） |
-| 収益化 | 未定（AdSense / アフィリエイト / 将来的にAdMob） |
+| ホスティング | GitHub Pages（無料サブドメイン `masaki0716.github.io/3Dsyougi` で開始、2026-07-27決定・未デプロイ） |
+| 収益化 | AdSense + 投げ銭 + itch.io 掲載（2026-07-27決定、未着手） |
 
 ## 設計の絶対ルール
 
