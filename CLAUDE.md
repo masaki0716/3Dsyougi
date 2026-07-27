@@ -13,15 +13,13 @@ knowledgeBaseSystemベースディレクトリの管理下プロジェクト一�
 
 ## 次セッションで最初にやること
 
-**2026-07-27の別セッションで完了**: フェーズC（GitHub Pagesデプロイ設定）完了。
-- リポジトリをPrivate→Publicに変更（GitHub Pages無料利用の前提条件のため）
-- Settings → Pages → Source: Deploy from a branch（main / root）で設定
-- 本番URL稼働確認: https://masaki0716.github.io/3Dsyougi/ 表示・プレイともに問題なしとユーザー確認済み（2026-07-27）
-- 併せて`.claude/settings.local.json`のpermissions.allowに`"PowerShell"`を追加（Bashと同様に確認なし実行に）
+**2026-07-27セッションで完了**: `privacy.html`の本文確定（下書き表記除去、B-1完了）。D-1（AdSense申請）の手順を`公開準備タスクリスト.md`に整理済み。
 
-次セッションでは以下のいずれかから着手：
-- D-1（AdSense申請）: プライバシーポリシー(B-1)・本番公開(フェーズC)は前提条件を満たしたので着手可能
-- B-2（Cookie同意/CMP）の検討
+**次セッションで最初にやること（D-1続き）**:
+- ユーザーがGoogle AdSenseアカウント作成・サイト追加（`https://masaki0716.github.io/3Dsyougi/`）まで進んでいるか確認
+- 進んでいれば、Googleが発行した所有権確認コード（`<meta>`タグ等）を`index.html`の`<head>`に埋め込む作業を行う（手順詳細は`公開準備タスクリスト.md`のD-1参照）
+- まだなら手順案内を再掲し、進捗を待つ
+- 並行して着手できる項目: B-2（Cookie同意/CMPの検討）
 
 **未完了の小さな持ち越し**: `.gitignore`に`.claude/settings.local.json`を追加する変更が未コミットのまま残っている（次セッションで確認・コミット判断）。
 
