@@ -15,16 +15,24 @@
   .panel{position:fixed;background:rgba(255,253,248,.85);border:1px solid rgba(138,106,30,.4);
     border-radius:10px;padding:10px 14px;backdrop-filter:blur(3px);pointer-events:none;
     box-shadow:0 4px 18px rgba(80,60,20,.18);}
-  #legend{left:14px;bottom:14px;line-height:1.7;font-size:14px;max-width:290px;
+  #legend{left:14px;bottom:64px;line-height:1.7;font-size:14px;max-width:290px;
     background:rgba(255,253,248,.45);}
   #legend h3{margin:0 0 6px;font-size:16px;letter-spacing:.15em;color:var(--gold);}
   #legend b{color:#111;font-weight:700;}
   #legend .k{display:inline-block;min-width:74px;color:var(--gold);}
+  #legendToggle{position:fixed;left:14px;bottom:14px;width:40px;height:40px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:18px;font-family:var(--brush);
+    pointer-events:auto;cursor:pointer;z-index:10;}
+  #legendToggle:hover{background:#fff8ec;}
   #turn{left:50%;top:12px;transform:translateX(-50%);text-align:center;font-size:22px;
     letter-spacing:.3em;padding:8px 26px;}
   #turn small{display:block;font-size:12px;letter-spacing:.1em;opacity:.75;margin-top:2px;}
   #info{right:14px;top:14px;font-size:14px;line-height:1.8;min-width:150px;}
   #info .val{color:#111;}
+  @media (max-width:899px){
+    /* 中央の手番表示と右上情報パネルが横並びで重なるため、狭い画面では下段に退避する */
+    #info{top:auto;bottom:64px;}
+  }
   .big{position:fixed;inset:0;display:none;align-items:center;justify-content:center;
     flex-direction:column;background:rgba(245,241,232,.82);z-index:20;}
   .big .msg{font-size:64px;letter-spacing:.2em;color:#7a1810;
@@ -54,10 +62,11 @@
 </a>
 
 <div id="info" class="panel">
-  <div>カーソル <span class="val" id="curPos">-</span></div>
   <div>マス <span class="val" id="curCell">空き</span></div>
   <div id="selLine" style="display:none">選択 <span class="val" id="selInfo">-</span></div>
 </div>
+
+<button id="legendToggle" class="panel" aria-label="操作方法を表示">？</button>
 
 <div id="legend" class="panel">
   <h3>操作方法</h3>
@@ -704,6 +713,17 @@ function updateEffects(dt){
 }
 
 // ===================== HUD =====================
+// 狭い画面では操作方法パネルが盤面に重なるため、既定は閉じておきトグルボタンで開閉する
+const legendEl = document.getElementById('legend');
+const legendToggle = document.getElementById('legendToggle');
+function setLegendOpen(open){
+  legendEl.style.display = open ? 'block' : 'none';
+  legendToggle.textContent = open ? '×' : '？';
+  legendToggle.setAttribute('aria-label', open ? '操作方法を閉じる' : '操作方法を表示');
+}
+legendToggle.addEventListener('click', ()=> setLegendOpen(legendEl.style.display==='none'));
+setLegendOpen(matchMedia('(min-width:900px)').matches);
+
 function pieceLabel(p){
   const name = kanjiOf(p);
   return (p.owner===SENTE?'先手 ':'後手 ')+name;
@@ -716,8 +736,6 @@ function updateHUD(){
   } else {
     turnHint.textContent = '手番の駒を選んでください';
   }
-  document.getElementById('curPos').textContent =
-    '['+(cursor.x+1)+','+(cursor.y+1)+','+(cursor.z+1)+']';
   const occ = board[cursor.x][cursor.y][cursor.z];
   document.getElementById('curCell').textContent = occ ? pieceLabel(occ) : '空き';
   const selLine = document.getElementById('selLine');
