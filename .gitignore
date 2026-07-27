@@ -5,3 +5,6 @@ _cert/
 *.png
 *.jpg
 *.jpeg
+
+# Claude Codeの個人設定（Bashコマンド確認省略など）
+.claude/settings.local.json

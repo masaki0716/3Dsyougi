@@ -13,18 +13,17 @@ knowledgeBaseSystemベースディレクトリの管理下プロジェクト一�
 
 ## 次セッションで最初にやること
 
-**2026-07-27セッションで完了した内容**（詳細は`公開準備タスクリスト.md`）: フェーズA（A-1〜A-4）の意思決定、および4本のworktreeブランチ全てのPRマージが完了。
-- A-1: 「ザ・ワールド！」→「勝利！！」、BOOM_WORDSの「メメタア」削除（`claude/ip-risk-wording`）
-- B-1: `privacy.html`（日英併記の下書き）追加（`claude/privacy-policy-draft`）
-- D-3: 投げ銭ボタン（応援するリンク）追加（`claude/tip-jar`）
-- B-3: 対局コードの満室通知・切断時専用画面・再生成ボタン追加（`claude/multiplayer-matchmaking`）
-- B-4/B-5: three.js関連を`vendor/three/`へ自前ホスティング、フォント埋め込みは見送りと判断（`claude/tech-polish`）
-
-worktree（`C:\Users\masas\worktrees\` 配下の4ディレクトリ）は役目を終えたので、次セッション開始時に`git worktree remove`で片付けてよい。
+**2026-07-27の別セッションで完了**: フェーズC（GitHub Pagesデプロイ設定）完了。
+- リポジトリをPrivate→Publicに変更（GitHub Pages無料利用の前提条件のため）
+- Settings → Pages → Source: Deploy from a branch（main / root）で設定
+- 本番URL稼働確認: https://masaki0716.github.io/3Dsyougi/ 表示・プレイともに問題なしとユーザー確認済み（2026-07-27）
+- 併せて`.claude/settings.local.json`のpermissions.allowに`"PowerShell"`を追加（Bashと同様に確認なし実行に）
 
 次セッションでは以下のいずれかから着手：
-- フェーズC（GitHub Pagesへのデプロイ設定）に着手
+- D-1（AdSense申請）: プライバシーポリシー(B-1)・本番公開(フェーズC)は前提条件を満たしたので着手可能
 - B-2（Cookie同意/CMP）の検討
+
+**未完了の小さな持ち越し**: `.gitignore`に`.claude/settings.local.json`を追加する変更が未コミットのまま残っている（次セッションで確認・コミット判断）。
 
 **⚠️ worktree運用でのCLAUDE.md事故（2026-07-27、2回発生・教訓化済み）**: worktree毎にCLAUDE.md冒頭へブランチ固有の「## このブランチのスコープ」節を書く運用にしていたが、この節は**通常のPRマージで無条件にmainへ混入する**（1つ目のブランチをマージした時点でmainがそのブランチのスコープ節に汚染され、2つ目以降のブランチとマージコンフリクトを起こした）。今後、worktreeでこの種のブランチ固有メモを書く場合は、**PRを作成する直前にスコープ節を削除するコミットを追加する**（またはそもそも`CLAUDE.md`本体に書かず`.gitignore`対象の別ファイルに書く）こと。
 
@@ -34,7 +33,7 @@ worktree（`C:\Users\masas\worktrees\` 配下の4ディレクトリ）は役目�
 |---|---|
 | 3D描画 | Three.js r128（`vendor/three/`に自前ホスティング。OrbitControls・LineSegments2系含む） |
 | オンライン対戦 | Trystero（P2P、既定Nostrシグナリング、`esm.run`から動的import。多段importのためCDN依存を許容） |
-| ホスティング | GitHub Pages（無料サブドメイン `masaki0716.github.io/3Dsyougi` で開始、2026-07-27決定・未デプロイ） |
+| ホスティング | GitHub Pages（無料サブドメイン `masaki0716.github.io/3Dsyougi` で稼働中、2026-07-27デプロイ完了。リポジトリはPublic化済み） |
 | 収益化 | AdSense + 投げ銭 + itch.io 掲載（2026-07-27決定。投げ銭UIは実装済み・実URL未設定） |
 
 ## 設計の絶対ルール
