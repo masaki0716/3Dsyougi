@@ -57,10 +57,10 @@ knowledgeBaseSystemベースディレクトリの管理下プロジェクト一�
 
 | worktreeパス | ブランチ | 担当タスク | index.htmlを触るか | 状態 |
 |---|---|---|---|---|
-| `C:\Users\masas\worktrees\3Dsyougi-multiplayer-matchmaking` | `claude/multiplayer-matchmaking` | B-3 対局コード仕様見直し(衝突/荒らし/切断対応) | 触る | 未着手・main追従済み（2026-07-27時点） |
+| `C:\Users\masas\worktrees\3Dsyougi-multiplayer-matchmaking` | `claude/multiplayer-matchmaking` | B-3 対局コード仕様見直し(衝突/荒らし/切断対応) | 触る | **完了・PR作成待ち**（2026-07-27） |
 | `C:\Users\masas\worktrees\3Dsyougi-tech-polish` | `claude/tech-polish` | B-4 CDN依存見直し + B-5 フォント依存対応(任意) | 触る | 未着手・main追従済み（2026-07-27時点） |
 | `C:\Users\masas\worktrees\3Dsyougi-privacy-policy-draft` | `claude/privacy-policy-draft` | B-1 プライバシーポリシー下書き | 触らない(新規`privacy.html`のみ) | **完了、PRマージ済み** |
-| `C:\Users\masas\worktrees\3Dsyougi-tip-jar` | `claude/tip-jar` | D-3 投げ銭ボタン組み込み(URLはプレースホルダ) | 触る | 未着手・main追従済み（2026-07-27時点） |
+| `C:\Users\masas\worktrees\3Dsyougi-tip-jar` | `claude/tip-jar` | D-3 投げ銭ボタン組み込み(URLはプレースホルダ) | 触る | **完了・PR作成待ち**（2026-07-27） |
 
 **注意**: いずれの並行ブランチもA-1〜A-4の意思決定には依存しないスコープに限定している。各ブランチで作業する際は、そのworktree直下の`CLAUDE.md`のスコープ説明を読むこと。オンライン対戦のテストが必要な場合、`_cert/`は`.gitignore`対象のため各worktreeには存在せず、本体からコピーするか作り直す必要がある（`multiplayer-matchmaking`のCLAUDE.mdに記載済み）。
 
