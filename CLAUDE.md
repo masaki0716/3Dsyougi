@@ -1,6 +1,6 @@
-# 3Dsyougi — CLAUDE.md（ブランチ: claude/tech-polish）
+# 3Dsyougi — CLAUDE.md
 
-## ⚠️ このブランチのスコープ（最優先で読む）
+## このブランチ（claude/tech-polish）のスコープ（最優先で読む）
 
 `公開準備タスクリスト.md` の **B-4: CDN依存の見直し** と **B-5: フォント依存の扱い**（両方とも「任意」項目）を担当するworktree。
 
@@ -20,7 +20,7 @@
 
 ---
 
-## プロジェクト概要（プロジェクト全体の背景。以下は本体と共通）
+## プロジェクト概要
 
 立体将棋（9×9×9）— 単一HTML(`index.html`)のThree.jsゲーム。ふざけ要素ありの個人開発。
 knowledgeBaseSystemベースディレクトリの管理下プロジェクト一覧（ルートCLAUDE.md）には未記載の新規プロジェクト。
