@@ -36,12 +36,22 @@
   #promo{gap:6px;}
   #promo .msg{font-size:40px;}
   #promo .sub{font-size:18px;letter-spacing:.15em;opacity:.85;}
+  #tipJar{right:14px;bottom:14px;display:flex;align-items:center;gap:6px;font-size:14px;
+    letter-spacing:.05em;color:var(--ink);text-decoration:none;pointer-events:auto;
+    border-radius:20px;padding:8px 16px;transition:background .15s;}
+  #tipJar:hover{background:rgba(255,253,248,.95);}
+  #tipJar .cup{font-size:16px;}
 </style>
 </head>
 <body>
 <div id="app"></div>
 
 <div id="turn" class="panel"><span id="turnLabel">先手番</span><small id="turnHint">手番の駒を選んでください</small></div>
+
+<!-- 投げ銭リンク: TODO-tip-jar-url を Buy Me a Coffee / Ko-fi 等の実URLに差し替える -->
+<a id="tipJar" class="panel" href="#TODO-tip-jar-url" target="_blank" rel="noopener noreferrer">
+  <span class="cup">☕</span>応援する
+</a>
 
 <div id="info" class="panel">
   <div>カーソル <span class="val" id="curPos">-</span></div>
