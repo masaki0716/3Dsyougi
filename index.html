@@ -83,7 +83,10 @@
 
 <div id="promo" class="big">
   <div class="msg">成りますか？</div>
-  <div class="sub"><b>Y</b> = 成る　　<b>N</b> = 不成</div>
+  <div style="display:flex;gap:16px;margin-top:10px">
+    <button id="btnPromoYes">成る（Y）</button>
+    <button id="btnPromoNo">不成（N）</button>
+  </div>
 </div>
 
 <div id="win" class="big">
@@ -554,6 +557,8 @@ function finishTurn(){
 
 // ===================== 成りプロンプト =====================
 function showPromo(on){ document.getElementById('promo').style.display = on?'flex':'none'; }
+document.getElementById('btnPromoYes').onclick = ()=> resolvePromo(true);
+document.getElementById('btnPromoNo').onclick = ()=> resolvePromo(false);
 function resolvePromo(yes){
   if(!pendingPromo) return;
   if(yes){ pendingPromo.promoted=true; refreshMesh(pendingPromo); }
